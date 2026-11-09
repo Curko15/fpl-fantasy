@@ -66,11 +66,11 @@ def _competition_ranks(totals: dict[int, int]) -> dict[int, int]:
     return {entry: ordered.index(total) + 1 for entry, total in totals.items()}
 
 
-async def build_league_overview(client: FplClient, league_id: int) -> LeagueOverview:
+async def build_league_overview(
+    client: FplClient, league_id: int, bootstrap: dict[str, Any]
+) -> LeagueOverview:
     try:
-        bootstrap, standings = await asyncio.gather(
-            client.bootstrap(), client.league_standings(league_id)
-        )
+        standings = await client.league_standings(league_id)
     except FplNotFound:
         raise LeagueError(
             "not_found", f"No classic league with ID {league_id} was found.", 404

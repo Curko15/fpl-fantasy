@@ -67,6 +67,9 @@ class FplClient:
     async def entry_history(self, entry_id: int) -> dict[str, Any]:
         return await self.get(f"/entry/{entry_id}/history/")
 
+    async def entry_transfers(self, entry_id: int) -> list[dict[str, Any]]:
+        return await self.get(f"/entry/{entry_id}/transfers/")
+
 
 def make_http_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(

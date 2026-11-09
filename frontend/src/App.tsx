@@ -2,8 +2,10 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 
-// The league page pulls in the charting library; keep it out of the home page bundle.
-const LeaguePage = lazy(() => import('./pages/LeaguePage'))
+// League pages pull in the charting library; keep them out of the home page bundle.
+const LeagueLayout = lazy(() => import('./pages/LeagueLayout'))
+const OverviewTab = lazy(() => import('./pages/OverviewTab'))
+const TransfersTab = lazy(() => import('./pages/TransfersTab'))
 
 export default function App() {
   return (
@@ -11,7 +13,10 @@ export default function App() {
       <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/league/:leagueId" element={<LeaguePage />} />
+          <Route path="/league/:leagueId" element={<LeagueLayout />}>
+            <Route index element={<OverviewTab />} />
+            <Route path="transfers" element={<TransfersTab />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

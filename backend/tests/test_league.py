@@ -56,7 +56,7 @@ def mock_league(results, histories, **kwargs):
 
 async def overview():
     async with httpx.AsyncClient() as http:
-        return await build_league_overview(FplClient(http, backoff_seconds=0), 42)
+        return await build_league_overview(FplClient(http, backoff_seconds=0), 42, BOOTSTRAP)
 
 
 @respx.mock

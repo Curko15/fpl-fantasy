@@ -1,21 +1,25 @@
-import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Path, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.cache import TtlCache
 from app.config import settings
 from app.fpl_client import FplClient, FplError, make_http_client
 from app.league import LeagueError, LeagueOverview, build_league_overview
+from app.transfers import LeagueTransfers, build_league_transfers
+
+LeagueId = Path(gt=0, le=2_147_483_647)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with make_http_client() as http:
         app.state.fpl = FplClient(http)
-        app.state.league_cache = {}
+        app.state.cache = TtlCache(settings.league_cache_seconds)
         yield
 
 
@@ -49,19 +53,37 @@ async def fpl_error_handler(_: Request, exc: FplError) -> JSONResponse:
     )
 
 
+async def _bootstrap(request: Request) -> dict[str, Any]:
+    fpl: FplClient = request.app.state.fpl
+    return await request.app.state.cache.get_or_load("bootstrap", fpl.bootstrap)
+
+
+async def _overview(request: Request, league_id: int) -> LeagueOverview:
+    fpl: FplClient = request.app.state.fpl
+
+    async def load() -> LeagueOverview:
+        return await build_league_overview(fpl, league_id, await _bootstrap(request))
+
+    return await request.app.state.cache.get_or_load(("league", league_id), load)
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.get("/api/leagues/{league_id}", response_model=LeagueOverview)
-async def get_league(
-    request: Request, league_id: int = Path(gt=0, le=2_147_483_647)
-) -> LeagueOverview:
-    cache: dict[int, tuple[float, LeagueOverview]] = request.app.state.league_cache
-    cached = cache.get(league_id)
-    if cached and time.monotonic() - cached[0] < settings.league_cache_seconds:
-        return cached[1]
-    overview = await build_league_overview(request.app.state.fpl, league_id)
-    cache[league_id] = (time.monotonic(), overview)
-    return overview
+async def get_league(request: Request, league_id: int = LeagueId) -> LeagueOverview:
+    return await _overview(request, league_id)
+
+
+@app.get("/api/leagues/{league_id}/transfers", response_model=LeagueTransfers)
+async def get_league_transfers(request: Request, league_id: int = LeagueId) -> LeagueTransfers:
+    overview = await _overview(request, league_id)
+
+    async def load() -> LeagueTransfers:
+        return await build_league_transfers(
+            request.app.state.fpl, overview, await _bootstrap(request)
+        )
+
+    return await request.app.state.cache.get_or_load(("transfers", league_id), load)
