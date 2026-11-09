@@ -10,9 +10,11 @@ from app.cache import TtlCache
 from app.config import settings
 from app.fpl_client import FplClient, FplError, make_http_client
 from app.league import LeagueError, LeagueOverview, build_league_overview
+from app.manager import ManagerDetail, build_manager_detail, live_points
 from app.transfers import LeagueTransfers, build_league_transfers
 
 LeagueId = Path(gt=0, le=2_147_483_647)
+EntryId = Path(gt=0, le=2_147_483_647)
 
 
 @asynccontextmanager
@@ -20,6 +22,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with make_http_client() as http:
         app.state.fpl = FplClient(http)
         app.state.cache = TtlCache(settings.league_cache_seconds)
+        app.state.finished_cache = TtlCache(settings.finished_gameweek_cache_seconds)
+        app.state.live_cache = TtlCache(settings.live_cache_seconds)
         yield
 
 
@@ -87,3 +91,34 @@ async def get_league_transfers(request: Request, league_id: int = LeagueId) -> L
         )
 
     return await request.app.state.cache.get_or_load(("transfers", league_id), load)
+
+
+@app.get("/api/leagues/{league_id}/managers/{entry_id}", response_model=ManagerDetail)
+async def get_manager(
+    request: Request, league_id: int = LeagueId, entry_id: int = EntryId
+) -> ManagerDetail:
+    overview = await _overview(request, league_id)
+    manager = next((m for m in overview.managers if m.entry_id == entry_id), None)
+    if manager is None:
+        raise LeagueError("manager_not_found", "That manager isn't in this league.", 404)
+
+    fpl: FplClient = request.app.state.fpl
+    bootstrap = await _bootstrap(request)
+    finished = {e["id"] for e in bootstrap["events"] if e.get("finished")}
+
+    def cache_for(event: int) -> TtlCache:
+        state = request.app.state
+        return state.finished_cache if event in finished else state.live_cache
+
+    async def load_picks(event: int) -> dict[str, Any]:
+        return await cache_for(event).get_or_load(
+            ("picks", entry_id, event), lambda: fpl.entry_picks(entry_id, event)
+        )
+
+    async def load_live(event: int) -> dict[int, int]:
+        async def load() -> dict[int, int]:
+            return live_points(await fpl.event_live(event))
+
+        return await cache_for(event).get_or_load(("live", event), load)
+
+    return await build_manager_detail(overview, manager, bootstrap, load_picks, load_live)

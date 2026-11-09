@@ -70,6 +70,12 @@ class FplClient:
     async def entry_transfers(self, entry_id: int) -> list[dict[str, Any]]:
         return await self.get(f"/entry/{entry_id}/transfers/")
 
+    async def entry_picks(self, entry_id: int, event: int) -> dict[str, Any]:
+        return await self.get(f"/entry/{entry_id}/event/{event}/picks/")
+
+    async def event_live(self, event: int) -> dict[str, Any]:
+        return await self.get(f"/event/{event}/live/")
+
 
 def make_http_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(
