@@ -47,17 +47,39 @@ class LeagueInfo(BaseModel):
     start_event: int
 
 
+class ChipDefinition(BaseModel):
+    """One playable chip as FPL defines it this season (e.g. first-half wildcard)."""
+
+    name: str
+    start_event: int
+    stop_event: int
+
+
 class LeagueOverview(BaseModel):
     league: LeagueInfo
     current_event: int | None
+    current_event_finished: bool
     events: list[int]
     managers: list[Manager]
+    chips: list[ChipDefinition]
     last_updated: datetime
 
 
-def _current_event(bootstrap: dict[str, Any]) -> int | None:
-    current = [e["id"] for e in bootstrap["events"] if e["is_current"]]
-    return current[0] if current else None
+def _current_event(bootstrap: dict[str, Any]) -> tuple[int | None, bool]:
+    current = [e for e in bootstrap["events"] if e["is_current"]]
+    if not current:
+        return None, False
+    return current[0]["id"], bool(current[0].get("finished"))
+
+
+def _chip_definitions(bootstrap: dict[str, Any]) -> list[ChipDefinition]:
+    chips = [
+        ChipDefinition(name=c["name"], start_event=c["start_event"], stop_event=c["stop_event"])
+        # A chip with number > 1 can be played that many times in its window.
+        for c in bootstrap.get("chips", [])
+        for _ in range(c.get("number", 1))
+    ]
+    return sorted(chips, key=lambda c: (c.start_event, c.name))
 
 
 def _competition_ranks(totals: dict[int, int]) -> dict[int, int]:
@@ -91,7 +113,7 @@ async def build_league_overview(
             422,
         )
 
-    current_event = _current_event(bootstrap)
+    current_event, current_finished = _current_event(bootstrap)
     start_event = league.get("start_event") or 1
     histories = await asyncio.gather(*(client.entry_history(r["entry"]) for r in results))
 
@@ -146,7 +168,9 @@ async def build_league_overview(
     return LeagueOverview(
         league=LeagueInfo(id=league["id"], name=league["name"], start_event=start_event),
         current_event=current_event,
+        current_event_finished=current_finished,
         events=events,
         managers=managers,
+        chips=_chip_definitions(bootstrap),
         last_updated=datetime.now(UTC),
     )

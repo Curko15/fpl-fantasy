@@ -14,8 +14,13 @@ BOOTSTRAP = {
     "events": [
         {"id": 1, "is_current": False},
         {"id": 2, "is_current": False},
-        {"id": 3, "is_current": True},
-    ]
+        {"id": 3, "is_current": True, "finished": False},
+    ],
+    "chips": [
+        {"name": "wildcard", "number": 1, "start_event": 20, "stop_event": 38},
+        {"name": "wildcard", "number": 1, "start_event": 2, "stop_event": 19},
+        {"name": "bboost", "number": 2, "start_event": 1, "stop_event": 38},
+    ],
 }
 
 
@@ -157,3 +162,18 @@ def test_endpoint_returns_error_code_for_frontend():
 
     assert response.status_code == 404
     assert response.json()["detail"]["code"] == "not_found"
+
+
+@respx.mock
+async def test_chip_definitions_come_from_bootstrap():
+    mock_league([row(1, 1, 10)], {1: {"current": [gw(1, 10)], "chips": []}})
+
+    result = await overview()
+
+    assert [(c.name, c.start_event, c.stop_event) for c in result.chips] == [
+        ("bboost", 1, 38),
+        ("bboost", 1, 38),
+        ("wildcard", 2, 19),
+        ("wildcard", 20, 38),
+    ]
+    assert (result.current_event, result.current_event_finished) == (3, False)

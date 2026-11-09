@@ -49,6 +49,8 @@ def overview(history, start_event=1):
     return LeagueOverview(
         league=LeagueInfo(id=42, name="Friends", start_event=start_event),
         current_event=5,
+        current_event_finished=True,
+        chips=[],
         events=[h.event for h in history],
         managers=[
             Manager(
