@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { Manager } from '../api'
 
 function Movement({ rank, lastRank }: { rank: number; lastRank: number }) {
@@ -44,7 +45,7 @@ export default function StandingsTable({
         </thead>
         <tbody className="divide-y divide-line">
           {managers.map((m) => (
-            <tr key={m.entry_id}>
+            <tr key={m.entry_id} className="relative active:bg-surface">
               <td className="py-2.5 pl-3 align-middle">
                 <div className="flex flex-col leading-tight">
                   <span className="font-semibold tabular-nums">{m.rank}</span>
@@ -52,8 +53,11 @@ export default function StandingsTable({
                 </div>
               </td>
               <td className="min-w-0 py-2.5 pr-2">
-                <div className="truncate font-medium">{m.team_name}</div>
-                <div className="truncate text-xs text-muted">{m.player_name}</div>
+                {/* Stretched link: the whole row opens the manager page. */}
+                <Link to={`manager/${m.entry_id}`} className="block after:absolute after:inset-0">
+                  <div className="truncate font-medium">{m.team_name}</div>
+                  <div className="truncate text-xs text-muted">{m.player_name}</div>
+                </Link>
               </td>
               <td className="py-2.5 text-right tabular-nums text-ink-2">{m.event_total}</td>
               <td className="py-2.5 pr-3 text-right font-semibold tabular-nums">{m.total}</td>

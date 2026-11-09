@@ -40,6 +40,7 @@ export type ApiErrorCode =
   | 'not_classic'
   | 'too_large'
   | 'fpl_unavailable'
+  | 'manager_not_found'
   | 'network'
   | 'unknown'
 
@@ -82,6 +83,38 @@ export interface ManagerTransferSummary {
 export interface LeagueTransfers {
   transfers: Transfer[]
   managers: ManagerTransferSummary[]
+}
+
+export interface Contributor {
+  player: Player
+  points: number
+  captain_points: number
+  starts: number
+  captained: number
+}
+
+export interface GameweekDetail {
+  event: number
+  points: number
+  total: number
+  league_rank: number
+  overall_rank: number | null
+  transfers_cost: number
+  chip: string | null
+  bench_points: number
+  captain: Player | null
+  captain_points: number
+}
+
+export interface ManagerDetail {
+  manager: Manager
+  contributors: Contributor[]
+  gameweeks: GameweekDetail[]
+  provisional_event: number | null
+}
+
+export function fetchManager(leagueId: number, entryId: number): Promise<ManagerDetail> {
+  return getJson(`/api/leagues/${leagueId}/managers/${entryId}`)
 }
 
 export function fetchLeague(leagueId: number): Promise<LeagueOverview> {

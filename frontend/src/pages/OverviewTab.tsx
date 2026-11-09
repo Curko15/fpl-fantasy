@@ -7,9 +7,12 @@ export default function OverviewTab() {
   return (
     <>
       <section aria-labelledby="standings-heading">
-        <h2 id="standings-heading" className="mb-2 text-lg font-semibold">
-          Standings
-        </h2>
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <h2 id="standings-heading" className="text-lg font-semibold">
+            Standings
+          </h2>
+          <span className="text-xs text-muted">Tap a manager for details</span>
+        </div>
         <StandingsTable managers={league.managers} currentEvent={league.current_event} />
       </section>
 

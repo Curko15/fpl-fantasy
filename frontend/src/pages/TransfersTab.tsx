@@ -1,28 +1,15 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import {
-  fetchLeagueTransfers,
-  formatPrice,
-  retryNetworkErrors,
-  type Manager,
-  type Transfer,
-  type TransferKind,
-} from '../api'
+import { fetchLeagueTransfers, retryNetworkErrors, type Manager } from '../api'
+import { TransferCard } from '../components/TransferCard'
+import { groupTransfers } from '../transfers'
 import { ErrorCard, Loading } from '../components/Status'
 import { useLeague } from './leagueContext'
 
 const GAMEWEEKS_PER_PAGE = 3
 const SUMMARY_COLLAPSED = 5
 
-const CHIP_LABEL: Partial<Record<TransferKind, string>> = { wildcard: 'Wildcard', free_hit: 'Free Hit' }
-
-interface ManagerGameweek {
-  manager: Manager
-  transfers: Transfer[]
-  chip: TransferKind | null
-  hitCost: number
-}
 
 export default function TransfersTab() {
   const { league } = useLeague()
@@ -53,34 +40,14 @@ export default function TransfersTab() {
     setPages(1)
   }
 
-  // Newest gameweek first; inside a gameweek, one card per manager.
   const gameweeks = useMemo(() => {
     if (!query.data) return []
-    const filtered = query.data.transfers.filter(
-      (t) => (!managerFilter || t.entry_id === managerFilter) && (!gwFilter || t.event === gwFilter),
+    return groupTransfers(
+      query.data.transfers.filter(
+        (t) => (!managerFilter || t.entry_id === managerFilter) && (!gwFilter || t.event === gwFilter),
+      ),
+      managers,
     )
-    const byEvent = new Map<number, Map<number, Transfer[]>>()
-    for (const t of filtered) {
-      const event = byEvent.get(t.event) ?? new Map<number, Transfer[]>()
-      event.set(t.entry_id, [...(event.get(t.entry_id) ?? []), t])
-      byEvent.set(t.event, event)
-    }
-    return [...byEvent.entries()]
-      .sort(([a], [b]) => b - a)
-      .map(([event, byManager]) => ({
-        event,
-        count: [...byManager.values()].reduce((n, ts) => n + ts.length, 0),
-        cards: [...byManager.entries()]
-          .map(([entryId, transfers]): ManagerGameweek | null => {
-            const manager = managers.get(entryId)
-            if (!manager) return null
-            const gw = manager.history.find((h) => h.event === event)
-            const chip = transfers.find((t) => CHIP_LABEL[t.kind])?.kind ?? null
-            return { manager, transfers, chip, hitCost: gw?.transfers_cost ?? 0 }
-          })
-          .filter((c): c is ManagerGameweek => c !== null)
-          .sort((a, b) => a.manager.rank - b.manager.rank),
-      }))
   }, [query.data, managerFilter, gwFilter, managers])
 
   if (query.isError) {
@@ -261,82 +228,5 @@ function FilterSelect({
         ))}
       </select>
     </label>
-  )
-}
-
-function Badge({ children, tone }: { children: ReactNode; tone: 'hit' | 'chip' }) {
-  return (
-    <span
-      className={`inline-flex h-5 shrink-0 items-center rounded-full px-2 text-[11px] font-semibold ${
-        tone === 'hit' ? 'bg-down/15 text-down' : 'bg-accent/15 text-accent'
-      }`}
-    >
-      {children}
-    </span>
-  )
-}
-
-function TransferCard({ card }: { card: ManagerGameweek }) {
-  const { manager, transfers, chip, hitCost } = card
-  return (
-    <li className="rounded-xl border border-line bg-card px-3 py-2.5">
-      <div className="flex items-center gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-medium">{manager.team_name}</div>
-          <div className="truncate text-xs text-muted">{manager.player_name}</div>
-        </div>
-        {chip && <Badge tone="chip">{CHIP_LABEL[chip]}</Badge>}
-        {!chip && hitCost > 0 && <Badge tone="hit">−{hitCost} pts</Badge>}
-      </div>
-      <ul className="mt-2 divide-y divide-line">
-        {transfers.map((t) => (
-          <li
-            key={`${t.time}-${t.player_in.id}`}
-            className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-2"
-          >
-            <PlayerCell direction="out" name={t.player_out.name} meta={`${t.player_out.team} · ${formatPrice(t.out_cost)}`} />
-            <span aria-hidden className="text-muted">
-              →
-            </span>
-            <PlayerCell
-              direction="in"
-              name={t.player_in.name}
-              meta={`${t.player_in.team} · ${formatPrice(t.in_cost)}`}
-              hit={t.kind === 'hit'}
-            />
-          </li>
-        ))}
-      </ul>
-    </li>
-  )
-}
-
-function PlayerCell({
-  direction,
-  name,
-  meta,
-  hit = false,
-}: {
-  direction: 'in' | 'out'
-  name: string
-  meta: string
-  hit?: boolean
-}) {
-  const out = direction === 'out'
-  return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-1">
-        <span className={`text-[10px] ${out ? 'text-down' : 'text-up'}`} aria-label={out ? 'Out' : 'In'}>
-          {out ? '▼' : '▲'}
-        </span>
-        <span className="truncate text-sm font-medium">{name}</span>
-        {hit && (
-          <span className="shrink-0 text-[10px] font-semibold text-down" title="Paid for with a points hit">
-            HIT
-          </span>
-        )}
-      </div>
-      <div className="truncate pl-3.5 text-xs text-muted">{meta}</div>
-    </div>
   )
 }

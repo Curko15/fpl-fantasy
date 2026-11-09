@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import type { Manager } from '../api'
 import { chipColumns, chipLabel, managerChipSlots, type ChipColumn, type ChipSlot } from '../chips'
 import { useLeague } from './leagueContext'
@@ -52,8 +53,10 @@ export default function ChipsTab() {
               {rows.map(({ manager, slots }) => (
                 <tr key={manager.entry_id}>
                   <th scope="row" className="sticky left-0 min-w-0 bg-card py-2 pl-3 pr-1 text-left font-normal">
-                    <div className="truncate font-medium">{manager.team_name}</div>
-                    <div className="truncate text-xs text-muted">{manager.player_name}</div>
+                    <Link to={`../manager/${manager.entry_id}`} className="block">
+                      <div className="truncate font-medium">{manager.team_name}</div>
+                      <div className="truncate text-xs text-muted">{manager.player_name}</div>
+                    </Link>
                   </th>
                   {columns.map((c) => (
                     <td key={c.name} className="py-1.5 text-center align-middle last:pr-1">

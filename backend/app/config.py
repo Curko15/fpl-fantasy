@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     hit_cost: int = 4
     # Until the database lands, league overviews are cached in memory this long.
     league_cache_seconds: int = 3600
+    # Data for finished gameweeks never changes, so it can be kept much longer.
+    finished_gameweek_cache_seconds: int = 86400
+    # Points for a gameweek still in progress.
+    live_cache_seconds: int = 300
     cors_origins: list[str] = ["http://localhost:5173"]
 
 

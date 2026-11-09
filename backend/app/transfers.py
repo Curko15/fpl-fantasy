@@ -46,7 +46,7 @@ class LeagueTransfers(BaseModel):
     managers: list[ManagerTransferSummary]  # league standings order
 
 
-def _players(bootstrap: dict[str, Any]) -> dict[int, Player]:
+def players_by_id(bootstrap: dict[str, Any]) -> dict[int, Player]:
     teams = {t["id"]: t["short_name"] for t in bootstrap["teams"]}
     positions = {p["id"]: p["singular_name_short"] for p in bootstrap["element_types"]}
     return {
@@ -60,7 +60,7 @@ def _players(bootstrap: dict[str, Any]) -> dict[int, Player]:
     }
 
 
-def _unknown_player(element_id: int) -> Player:
+def unknown_player(element_id: int) -> Player:
     return Player(id=element_id, name=f"Player {element_id}", team="?", position="?")
 
 
@@ -83,7 +83,7 @@ def tag_gameweek(
 async def build_league_transfers(
     client: FplClient, overview: LeagueOverview, bootstrap: dict[str, Any]
 ) -> LeagueTransfers:
-    players = _players(bootstrap)
+    players = players_by_id(bootstrap)
     raw = await asyncio.gather(*(client.entry_transfers(m.entry_id) for m in overview.managers))
 
     feed: list[Transfer] = []
@@ -108,10 +108,10 @@ async def build_league_transfers(
                         entry_id=manager.entry_id,
                         event=event,
                         time=t["time"],
-                        player_in=players.get(t["element_in"]) or _unknown_player(t["element_in"]),
+                        player_in=players.get(t["element_in"]) or unknown_player(t["element_in"]),
                         in_cost=t["element_in_cost"],
                         player_out=players.get(t["element_out"])
-                        or _unknown_player(t["element_out"]),
+                        or unknown_player(t["element_out"]),
                         out_cost=t["element_out_cost"],
                         kind=kind,
                     )
