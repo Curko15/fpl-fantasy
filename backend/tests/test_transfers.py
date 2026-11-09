@@ -1,14 +1,7 @@
 from datetime import UTC, datetime
 
-import httpx
-import respx
-
-from app.config import settings
-from app.fpl_client import FplClient
 from app.league import GameweekEntry, LeagueInfo, LeagueOverview, Manager
 from app.transfers import build_league_transfers, tag_gameweek
-
-API = settings.fpl_api_base
 
 BOOTSTRAP = {
     "teams": [{"id": 1, "short_name": "ARS"}, {"id": 2, "short_name": "LIV"}],
@@ -86,21 +79,19 @@ def test_chip_gameweeks_tag_every_transfer():
     assert [k for _, k in tag_gameweek(ts, chip="bboost", cost=4)] == ["free", "hit"]
 
 
-@respx.mock
-async def test_league_feed_and_summary():
-    respx.get(f"{API}/entry/1/transfers/").respond(
-        json=[
+def test_league_feed_and_summary():
+    transfers = {
+        1: [
             transfer(10, 20, 2, 1),
             transfer(20, 30, 3, 5),
             transfer(30, 10, 3, 6),
             transfer(10, 999, 4, 9),  # unknown player id
             transfer(30, 20, 1, 0),  # before the league started
         ]
-    )
+    }
     data = overview([gw(2), gw(3, cost=4), gw(4, chip="wildcard")], start_event=2)
 
-    async with httpx.AsyncClient() as http:
-        result = await build_league_transfers(FplClient(http), data, BOOTSTRAP)
+    result = build_league_transfers(data, transfers, BOOTSTRAP)
 
     assert [(t.event, t.kind) for t in result.transfers] == [
         (4, "wildcard"),

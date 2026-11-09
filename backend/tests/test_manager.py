@@ -1,15 +1,7 @@
 from datetime import UTC, datetime
 
-import pytest
-import respx
-from fastapi.testclient import TestClient
-
-from app.config import settings
 from app.league import GameweekEntry, LeagueInfo, LeagueOverview, Manager
-from app.main import app
-from app.manager import build_manager_detail, live_points
-
-API = settings.fpl_api_base
+from app.manager import build_manager_detail
 
 BOOTSTRAP = {
     "teams": [{"id": 1, "short_name": "LIV"}],
@@ -74,18 +66,12 @@ LIVE = {
 }
 
 
-async def detail(finished=True):
-    async def load_picks(event):
-        return PICKS[event]
-
-    async def load_live(event):
-        return LIVE[event]
-
-    return await build_manager_detail(overview(finished), MANAGER, BOOTSTRAP, load_picks, load_live)
+def detail(finished=True):
+    return build_manager_detail(overview(finished), MANAGER, BOOTSTRAP, PICKS, LIVE)
 
 
-async def test_contributors_count_only_points_that_counted():
-    result = await detail()
+def test_contributors_count_only_points_that_counted():
+    result = detail()
     by_name = {c.player.name: c for c in result.contributors}
 
     assert [c.player.name for c in result.contributors][:2] == ["Salah", "Saka"]
@@ -97,8 +83,8 @@ async def test_contributors_count_only_points_that_counted():
     assert "Bench" not in by_name
 
 
-async def test_gameweek_log_newest_first_with_captain_and_bench():
-    result = await detail()
+def test_gameweek_log_newest_first_with_captain_and_bench():
+    result = detail()
 
     gw2, gw1 = result.gameweeks
     assert (gw2.event, gw2.chip, gw2.captain.name, gw2.captain_points) == (2, "3xc", "Salah", 36)
@@ -107,61 +93,5 @@ async def test_gameweek_log_newest_first_with_captain_and_bench():
     assert result.provisional_event is None
 
 
-async def test_unfinished_gameweek_is_flagged_provisional():
-    assert (await detail(finished=False)).provisional_event == 2
-
-
-def test_live_points_reduces_payload():
-    payload = {"elements": [{"id": 1, "stats": {"total_points": 7, "minutes": 90}}]}
-    assert live_points(payload) == {1: 7}
-
-
-@pytest.fixture
-def league_api():
-    with respx.mock:
-        respx.get(f"{API}/bootstrap-static/").respond(
-            json={**BOOTSTRAP, "events": [{"id": 1, "is_current": True, "finished": True}]}
-        )
-        respx.get(f"{API}/leagues-classic/42/standings/").respond(
-            json={
-                "league": {"id": 42, "name": "F", "scoring": "c", "start_event": 1},
-                "standings": {
-                    "has_next": False,
-                    "results": [
-                        {
-                            "entry": 7,
-                            "entry_name": "T",
-                            "player_name": "P",
-                            "rank": 1,
-                            "last_rank": 1,
-                            "total": 60,
-                            "event_total": 60,
-                        }
-                    ],
-                },
-            }
-        )
-        respx.get(f"{API}/entry/7/history/").respond(
-            json={
-                "current": [
-                    {"event": 1, "points": 60, "event_transfers_cost": 0, "overall_rank": 5}
-                ],
-                "chips": [],
-            }
-        )
-        respx.get(f"{API}/entry/7/event/1/picks/").respond(json=PICKS[1])
-        respx.get(f"{API}/event/1/live/").respond(
-            json={"elements": [{"id": i, "stats": {"total_points": p}} for i, p in LIVE[1].items()]}
-        )
-        yield
-
-
-def test_manager_endpoint(league_api):
-    with TestClient(app) as client:
-        ok = client.get("/api/leagues/42/managers/7")
-        missing = client.get("/api/leagues/42/managers/8")
-
-    assert ok.status_code == 200
-    assert ok.json()["contributors"][0]["player"]["name"] == "Saka"
-    assert missing.status_code == 404
-    assert missing.json()["detail"]["code"] == "manager_not_found"
+def test_unfinished_gameweek_is_flagged_provisional():
+    assert detail(finished=False).provisional_event == 2

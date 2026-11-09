@@ -28,12 +28,14 @@ class FplClient:
         *,
         max_concurrency: int = settings.fpl_max_concurrency,
         max_retries: int = 3,
-        backoff_seconds: float = 1.0,
+        backoff_seconds: float | None = None,
     ) -> None:
         self._http = http
         self._semaphore = asyncio.Semaphore(max_concurrency)
         self._max_retries = max_retries
-        self._backoff = backoff_seconds
+        self._backoff = (
+            settings.fpl_retry_backoff_seconds if backoff_seconds is None else backoff_seconds
+        )
 
     async def get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         url = f"{settings.fpl_api_base}{path}"

@@ -66,8 +66,10 @@ Browser (React)  ──>  Backend (FastAPI)  ──>  Official FPL API
 - The backend fetches league data from the public FPL API, stores it, and works out the
   stats and awards.
 - The first visit to a league takes a few seconds while its data is fetched. After that it
-  loads instantly.
+  loads instantly from the database, and every manager's gameweek teams are fetched in the
+  background.
 - Data is refreshed **once a day** for every league that people have looked at recently.
+  Finished gameweeks never change, so they are fetched only once.
 - Leagues are limited to **50 managers**. Classic scoring only for now.
 
 ## Tech stack
@@ -98,6 +100,16 @@ pip install -e ".[dev]"
 uvicorn app.main:app --reload --port 8000
 pytest                        # run tests
 ```
+
+Data is stored in a local SQLite file, `backend/fpl.db`, created on first start. Delete it to
+start from scratch. Settings are read from environment variables (or `backend/.env`):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `FPL_DATABASE_URL` | `sqlite+aiosqlite:///./fpl.db` | Use a Postgres URL in production (`postgres://…` works as-is; install with `pip install -e ".[postgres]"`) |
+| `FPL_REFRESH_HOUR_UTC` | `6` | Hour of the daily refresh |
+| `FPL_REFRESH_RECENT_DAYS` | `14` | Only leagues viewed within this many days are refreshed |
+| `FPL_STALE_AFTER_HOURS` | `26` | Older leagues are refreshed in the background when opened |
 
 **Frontend** (Node 20+), in a second terminal:
 
