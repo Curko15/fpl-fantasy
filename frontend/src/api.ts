@@ -19,11 +19,19 @@ export interface Manager {
   history: GameweekEntry[]
 }
 
+export interface ChipDefinition {
+  name: string
+  start_event: number
+  stop_event: number
+}
+
 export interface LeagueOverview {
   league: { id: number; name: string; start_event: number }
   current_event: number | null
+  current_event_finished: boolean
   events: number[]
   managers: Manager[]
+  chips: ChipDefinition[]
   last_updated: string
 }
 
