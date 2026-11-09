@@ -44,10 +44,60 @@ export class ApiError extends Error {
   }
 }
 
-export async function fetchLeague(leagueId: number): Promise<LeagueOverview> {
+export interface Player {
+  id: number
+  name: string
+  team: string
+  position: string
+}
+
+export type TransferKind = 'free' | 'hit' | 'wildcard' | 'free_hit'
+
+export interface Transfer {
+  entry_id: number
+  event: number
+  time: string
+  player_in: Player
+  in_cost: number
+  player_out: Player
+  out_cost: number
+  kind: TransferKind
+}
+
+export interface ManagerTransferSummary {
+  entry_id: number
+  transfers: number
+  hits: number
+  hit_cost: number
+}
+
+export interface LeagueTransfers {
+  transfers: Transfer[]
+  managers: ManagerTransferSummary[]
+}
+
+export function fetchLeague(leagueId: number): Promise<LeagueOverview> {
+  return getJson(`/api/leagues/${leagueId}`)
+}
+
+export function fetchLeagueTransfers(leagueId: number): Promise<LeagueTransfers> {
+  return getJson(`/api/leagues/${leagueId}/transfers`)
+}
+
+/** FPL prices are in tenths of a million. */
+export function formatPrice(cost: number): string {
+  return `£${(cost / 10).toFixed(1)}m`
+}
+
+/** Only retry when the network blipped; FPL errors are already retried server-side. */
+export function retryNetworkErrors(count: number, error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'network' && count < 2
+}
+
+async function getJson<T>(url: string): Promise<T> {
   let res: Response
   try {
-    res = await fetch(`/api/leagues/${leagueId}`)
+    res = await fetch(url)
   } catch {
     throw new ApiError('network', "Couldn't reach the server. Check your connection.")
   }
