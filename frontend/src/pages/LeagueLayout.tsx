@@ -18,6 +18,7 @@ const TABS = [
   { to: '', label: 'Overview', end: true },
   { to: 'transfers', label: 'Transfers', end: false },
   { to: 'chips', label: 'Chips', end: false },
+  { to: 'awards', label: 'Awards', end: false },
 ]
 
 function BackLink() {

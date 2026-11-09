@@ -8,6 +8,7 @@ const LeagueLayout = lazy(() => import('./pages/LeagueLayout'))
 const OverviewTab = lazy(() => import('./pages/OverviewTab'))
 const TransfersTab = lazy(() => import('./pages/TransfersTab'))
 const ChipsTab = lazy(() => import('./pages/ChipsTab'))
+const AwardsTab = lazy(() => import('./pages/AwardsTab'))
 const ManagerPage = lazy(() => import('./pages/ManagerPage'))
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
             <Route index element={<OverviewTab />} />
             <Route path="transfers" element={<TransfersTab />} />
             <Route path="chips" element={<ChipsTab />} />
+            <Route path="awards" element={<AwardsTab />} />
             <Route path="manager/:entryId" element={<ManagerPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

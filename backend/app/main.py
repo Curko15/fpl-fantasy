@@ -5,6 +5,7 @@ from fastapi import FastAPI, Path, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.awards import LeagueAwards, build_league_awards
 from app.config import settings
 from app.db import create_tables, make_engine, make_sessionmaker
 from app.fpl_client import FplClient, FplError, make_http_client
@@ -109,3 +110,22 @@ async def get_manager(
     picks = await store.picks(entry_id, events)
     live = await store.live(events)
     return build_manager_detail(overview, manager, await store.bootstrap(), picks, live)
+
+
+@app.get("/api/leagues/{league_id}/awards", response_model=LeagueAwards)
+async def get_league_awards(request: Request, league_id: int = LeagueId) -> LeagueAwards:
+    """Built only from stored data. Gameweeks still being backfilled come back as pending."""
+    store = _store(request)
+    data = await store.league(league_id)
+    bootstrap = await store.bootstrap()
+    overview = build_league_overview(data.standings, data.histories, bootstrap, data.fetched_at)
+    awards = build_league_awards(
+        overview,
+        bootstrap,
+        await store.stored_picks(data.histories),
+        await store.stored_live(),
+        data.transfers,
+    )
+    if awards.pending_events:
+        store.spawn(("backfill", league_id), store.backfill_picks(league_id))
+    return awards
