@@ -1,6 +1,5 @@
 """League-wide transfer feed with each transfer tagged free / hit / wildcard / free hit."""
 
-import asyncio
 from collections import defaultdict
 from datetime import datetime
 from typing import Any, Literal
@@ -8,7 +7,6 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from app.config import settings
-from app.fpl_client import FplClient
 from app.league import LeagueOverview
 
 TransferKind = Literal["free", "hit", "wildcard", "free_hit"]
@@ -80,15 +78,15 @@ def tag_gameweek(
     return [(t, "free" if i < free else "hit") for i, t in enumerate(ordered)]
 
 
-async def build_league_transfers(
-    client: FplClient, overview: LeagueOverview, bootstrap: dict[str, Any]
+def build_league_transfers(
+    overview: LeagueOverview, transfers: dict[int, list[Any]], bootstrap: dict[str, Any]
 ) -> LeagueTransfers:
     players = players_by_id(bootstrap)
-    raw = await asyncio.gather(*(client.entry_transfers(m.entry_id) for m in overview.managers))
 
     feed: list[Transfer] = []
     summaries: list[ManagerTransferSummary] = []
-    for manager, manager_transfers in zip(overview.managers, raw, strict=True):
+    for manager in overview.managers:
+        manager_transfers = transfers.get(manager.entry_id, [])
         gws = {h.event: h for h in manager.history}
         by_event: dict[int, list[dict[str, Any]]] = defaultdict(list)
         for t in manager_transfers:
@@ -97,11 +95,11 @@ async def build_league_transfers(
                 by_event[t["event"]].append(t)
 
         hits = 0
-        for event, transfers in by_event.items():
+        for event, gw_transfers in by_event.items():
             gw = gws.get(event)
             chip = gw.chip if gw else None
             cost = gw.transfers_cost if gw else 0
-            for t, kind in tag_gameweek(transfers, chip, cost):
+            for t, kind in tag_gameweek(gw_transfers, chip, cost):
                 hits += kind == "hit"
                 feed.append(
                     Transfer(

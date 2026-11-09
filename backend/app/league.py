@@ -1,13 +1,11 @@
 """Builds the league overview: standings plus per-gameweek league rank history."""
 
-import asyncio
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel
 
 from app.config import settings
-from app.fpl_client import FplClient, FplNotFound
 
 
 class LeagueError(Exception):
@@ -88,22 +86,12 @@ def _competition_ranks(totals: dict[int, int]) -> dict[int, int]:
     return {entry: ordered.index(total) + 1 for entry, total in totals.items()}
 
 
-async def build_league_overview(
-    client: FplClient, league_id: int, bootstrap: dict[str, Any]
-) -> LeagueOverview:
-    try:
-        standings = await client.league_standings(league_id)
-    except FplNotFound:
-        raise LeagueError(
-            "not_found", f"No classic league with ID {league_id} was found.", 404
-        ) from None
-
-    league = standings["league"]
-    if league.get("scoring") != "c":
+def validate_standings(standings: dict[str, Any]) -> None:
+    """Reject leagues we don't support, before fetching anything else."""
+    if standings["league"].get("scoring") != "c":
         raise LeagueError(
             "not_classic", "Head-to-head leagues aren't supported yet, only classic leagues.", 422
         )
-
     results = standings["standings"]["results"]
     if standings["standings"]["has_next"] or len(results) > settings.max_league_size:
         raise LeagueError(
@@ -113,15 +101,23 @@ async def build_league_overview(
             422,
         )
 
+
+def build_league_overview(
+    standings: dict[str, Any],
+    histories: dict[int, dict[str, Any]],
+    bootstrap: dict[str, Any],
+    fetched_at: datetime,
+) -> LeagueOverview:
+    league = standings["league"]
+    results = standings["standings"]["results"]
     current_event, current_finished = _current_event(bootstrap)
     start_event = league.get("start_event") or 1
-    histories = await asyncio.gather(*(client.entry_history(r["entry"]) for r in results))
-
     # Per manager: {event: (gw points after hits, league total so far, row)}
     per_manager: dict[int, dict[int, tuple[int, int, dict[str, Any]]]] = {}
     chips_by_manager: dict[int, dict[int, str]] = {}
-    for row, history in zip(results, histories, strict=True):
+    for row in results:
         entry = row["entry"]
+        history = histories[entry]
         chips_by_manager[entry] = {c["event"]: c["name"] for c in history.get("chips", [])}
         running = 0
         gws: dict[int, tuple[int, int, dict[str, Any]]] = {}
@@ -172,5 +168,5 @@ async def build_league_overview(
         events=events,
         managers=managers,
         chips=_chip_definitions(bootstrap),
-        last_updated=datetime.now(UTC),
+        last_updated=fetched_at,
     )

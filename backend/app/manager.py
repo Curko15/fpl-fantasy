@@ -1,16 +1,11 @@
 """Manager page: which players earned the points, and a gameweek-by-gameweek log."""
 
-import asyncio
-from collections.abc import Awaitable, Callable
 from typing import Any
 
 from pydantic import BaseModel
 
 from app.league import LeagueOverview, Manager
 from app.transfers import Player, players_by_id, unknown_player
-
-PicksLoader = Callable[[int], Awaitable[dict[str, Any]]]
-LiveLoader = Callable[[int], Awaitable[dict[int, int]]]
 
 
 class Contributor(BaseModel):
@@ -41,24 +36,18 @@ class ManagerDetail(BaseModel):
     provisional_event: int | None  # set while the current gameweek's points can still change
 
 
-def live_points(live: dict[str, Any]) -> dict[int, int]:
-    """Reduce the large /event/{gw}/live/ payload to {player id: points}."""
-    return {e["id"]: e["stats"]["total_points"] for e in live["elements"]}
-
-
-async def build_manager_detail(
+def build_manager_detail(
     overview: LeagueOverview,
     manager: Manager,
     bootstrap: dict[str, Any],
-    load_picks: PicksLoader,
-    load_live: LiveLoader,
+    picks_by_event: dict[int, dict[str, Any]],
+    live_by_event: dict[int, dict[int, int]],
 ) -> ManagerDetail:
+    """`picks_by_event` / `live_by_event` must cover every gameweek in the manager's history."""
     players = players_by_id(bootstrap)
     events = [h.event for h in manager.history]
-    picks_list, live_list = await asyncio.gather(
-        asyncio.gather(*(load_picks(e) for e in events)),
-        asyncio.gather(*(load_live(e) for e in events)),
-    )
+    picks_list = [picks_by_event[e] for e in events]
+    live_list = [live_by_event[e] for e in events]
 
     contributors: dict[int, Contributor] = {}
     gameweeks: list[GameweekDetail] = []
