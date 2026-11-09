@@ -15,7 +15,7 @@ their league: rank history, transfers, chips, and who scored the points.
 | Backend | Python + FastAPI, `httpx` (async) for FPL calls, APScheduler for the daily job. |
 | Database | PostgreSQL in production, SQLite locally. |
 | Hosting (planned) | Frontend: Vercel/Netlify/Cloudflare Pages. Backend: Render/Fly.io. DB: Neon/Supabase. |
-| Layout | Mobile-friendly / responsive (friends will open it on phones). |
+| Layout | **Mobile-first.** Most friends open it on phones: design every screen for ~375px first, no horizontal page scroll, tap targets ≥44px, charts readable on narrow screens. |
 
 ## Architecture
 

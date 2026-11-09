@@ -1,26 +1,20 @@
-import { useQuery } from '@tanstack/react-query'
+import { lazy, Suspense } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import HomePage from './pages/HomePage'
 
-async function fetchHealth(): Promise<{ status: string }> {
-  const res = await fetch('/api/health')
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
-}
+// The league page pulls in the charting library; keep it out of the home page bundle.
+const LeaguePage = lazy(() => import('./pages/LeaguePage'))
 
 export default function App() {
-  const health = useQuery({ queryKey: ['health'], queryFn: fetchHealth })
-
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-16 text-slate-900">
-      <div className="mx-auto max-w-xl text-center">
-        <h1 className="text-3xl font-bold tracking-tight">FPL League Tracker</h1>
-        <p className="mt-3 text-slate-600">
-          Enter your classic league ID to see rank history, transfers and chips.
-        </p>
-        <p className="mt-8 text-sm text-slate-500">
-          Backend:{' '}
-          {health.isPending ? 'checking…' : health.isError ? 'unreachable' : health.data.status}
-        </p>
-      </div>
-    </main>
+    <BrowserRouter>
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/league/:leagueId" element={<LeaguePage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   )
 }

@@ -1,1 +1,48 @@
 @import "tailwindcss";
+
+/* Design tokens. Utilities like bg-surface / text-ink read these, and dark mode
+   only swaps the variables, so components never need dark: variants. */
+@theme {
+  --color-surface: #f6f6f4;
+  --color-card: #ffffff;
+  --color-ink: #0b0b0b;
+  --color-ink-2: #52514e;
+  --color-muted: #6f6e69;
+  --color-line: #e4e3df;
+  --color-accent: #37003c;
+  --color-accent-ink: #ffffff;
+  --color-up: #0f7b3e;
+  --color-down: #c7362f;
+  --color-focus: #2a78d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-surface: #121211;
+    --color-card: #1a1a19;
+    --color-ink: #f0efec;
+    --color-ink-2: #c3c2b7;
+    --color-muted: #9a998f;
+    --color-line: #2e2e2c;
+    --color-accent: #e0b0ff;
+    --color-accent-ink: #1a0020;
+    --color-up: #4cc27f;
+    --color-down: #f07a72;
+    --color-focus: #3987e5;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  @apply bg-surface text-ink antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
