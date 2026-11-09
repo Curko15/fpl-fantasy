@@ -113,6 +113,45 @@ export interface ManagerDetail {
   provisional_event: number | null
 }
 
+export type AwardKey =
+  | 'manager_of_week'
+  | 'loser_of_week'
+  | 'bench_loser'
+  | 'lucky_sub'
+  | 'vice_saviour'
+  | 'captain_fail'
+  | 'hit_regret'
+  | 'sold_too_soon'
+  | 'chip_flop'
+
+export interface AwardWinner {
+  entry_id: number
+  value: number
+  player: Player | null
+  other_player: Player | null
+  secondary: number | null
+  chip: string | null
+}
+
+export interface Award {
+  key: AwardKey
+  winners: AwardWinner[]
+  popular_captain: Player | null
+  popular_captain_count: number | null
+  popular_captain_points: number | null
+  popular_captain_of: number | null
+}
+
+export interface LeagueAwards {
+  gameweeks: { event: number; awards: Award[] }[]
+  hall: { key: AwardKey; ranking: { entry_id: number; wins: number }[] }[]
+  pending_events: number[]
+}
+
+export function fetchLeagueAwards(leagueId: number): Promise<LeagueAwards> {
+  return getJson(`/api/leagues/${leagueId}/awards`)
+}
+
 export function fetchManager(leagueId: number, entryId: number): Promise<ManagerDetail> {
   return getJson(`/api/leagues/${leagueId}/managers/${entryId}`)
 }

@@ -183,6 +183,23 @@ class FplStore:
     async def live(self, events: Iterable[int]) -> dict[int, dict[int, int]]:
         return await self._live(set(events), refetch_provisional=False)
 
+    async def stored_picks(self, entry_ids: Iterable[int]) -> dict[int, dict[int, dict[str, Any]]]:
+        """Every stored gameweek of picks for these managers, without fetching anything."""
+        ids = list(entry_ids)
+        result: dict[int, dict[int, dict[str, Any]]] = {entry: {} for entry in ids}
+        async with self._sessions() as session:
+            for row in await session.scalars(select(PicksRow).where(PicksRow.entry_id.in_(ids))):
+                result[row.entry_id][row.event] = row.data
+        return result
+
+    async def stored_live(self) -> dict[int, dict[int, int]]:
+        """Live points for every stored gameweek, without fetching anything."""
+        async with self._sessions() as session:
+            return {
+                row.event: {int(k): v for k, v in row.points.items()}
+                for row in await session.scalars(select(LiveRow))
+            }
+
     async def backfill_picks(self, league_id: int) -> None:
         """Fetch every member's picks for every gameweek, plus live points.
 
