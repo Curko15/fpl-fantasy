@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchLeagueAwards, retryNetworkErrors, type Award, type LeagueAwards, type Manager } from '../api'
 import { AWARDS, awardNote } from '../awards'
 import { PlayerPhoto } from '../components/PlayerPhoto'
-import { ErrorCard, Loading } from '../components/Status'
+import { ErrorCard } from '../components/Status'
+import { AwardsSkeleton } from '../components/Skeleton'
 import { useLeague } from './leagueContext'
 
 export default function AwardsTab() {
@@ -25,7 +26,7 @@ export default function AwardsTab() {
   if (query.isError) {
     return <ErrorCard title="Can't load awards" error={query.error} onRetry={() => query.refetch()} />
   }
-  if (!query.data) return <Loading title="Loading awards…" />
+  if (!query.data) return <AwardsSkeleton />
 
   const data = query.data
   const requested = Number(params.get('gw'))

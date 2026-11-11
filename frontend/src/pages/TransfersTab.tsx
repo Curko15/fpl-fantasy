@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchLeagueTransfers, retryNetworkErrors, type Manager } from '../api'
 import { TransferCard } from '../components/TransferCard'
 import { groupTransfers } from '../transfers'
-import { ErrorCard, Loading } from '../components/Status'
+import { ErrorCard } from '../components/Status'
+import { TransfersSkeleton } from '../components/Skeleton'
 import { useLeague } from './leagueContext'
 
 const GAMEWEEKS_PER_PAGE = 3
@@ -54,7 +55,7 @@ export default function TransfersTab() {
     return <ErrorCard title="Can't load transfers" error={query.error} onRetry={() => query.refetch()} />
   }
   if (!query.data) {
-    return <Loading title="Loading transfers…" hint="Fetching every manager's transfer history." />
+    return <TransfersSkeleton />
   }
 
   const visible = gameweeks.slice(0, pages * GAMEWEEKS_PER_PAGE)
