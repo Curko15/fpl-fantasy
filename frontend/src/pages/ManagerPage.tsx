@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -23,11 +23,6 @@ export default function ManagerPage() {
   const entryId = Number(useParams().entryId)
   const leagueId = league.league.id
   const manager = league.managers.find((m) => m.entry_id === entryId)
-
-  // Opened from further down the standings: start at the top of the page.
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [entryId])
 
   const query = useQuery({
     queryKey: ['league', leagueId, 'manager', entryId],
@@ -78,8 +73,8 @@ function ManagerHeader({ manager }: { manager: Manager }) {
   return (
     <header className="flex items-center gap-3 rounded-xl border border-line bg-card p-4">
       <div className="min-w-0 flex-1">
-        <h2 className="truncate text-lg font-semibold">{manager.team_name}</h2>
-        <p className="truncate text-sm text-muted">{manager.player_name}</p>
+        <h2 className="truncate text-lg font-semibold">{manager.player_name}</h2>
+        <p className="truncate text-sm text-muted">Manager</p>
       </div>
       <div className="text-right">
         <div className="text-2xl font-bold tabular-nums">{manager.total}</div>
