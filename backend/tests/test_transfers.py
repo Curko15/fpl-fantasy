@@ -4,10 +4,13 @@ from app.league import GameweekEntry, LeagueInfo, LeagueOverview, Manager
 from app.transfers import build_league_transfers, tag_gameweek
 
 BOOTSTRAP = {
-    "teams": [{"id": 1, "short_name": "ARS"}, {"id": 2, "short_name": "LIV"}],
+    "teams": [
+        {"id": 1, "short_name": "ARS", "code": 3},
+        {"id": 2, "short_name": "LIV", "code": 14},
+    ],
     "element_types": [{"id": 3, "singular_name_short": "MID"}],
     "elements": [
-        {"id": 10, "web_name": "Saka", "team": 1, "element_type": 3},
+        {"id": 10, "web_name": "Saka", "team": 1, "element_type": 3, "code": 223340},
         {"id": 20, "web_name": "Salah", "team": 2, "element_type": 3},
         {"id": 30, "web_name": "Odegaard", "team": 1, "element_type": 3},
     ],
@@ -99,8 +102,10 @@ def test_league_feed_and_summary():
         (3, "free"),
         (2, "free"),
     ]
-    assert result.transfers[-1].player_in.name == "Saka"
+    saka = result.transfers[-1].player_in
+    assert (saka.name, saka.photo_code, saka.team_code) == ("Saka", 223340, 3)
     assert result.transfers[-1].player_out.team == "LIV"
-    assert result.transfers[0].player_out.name == "Player 999"
+    unknown = result.transfers[0].player_out
+    assert (unknown.name, unknown.photo_code, unknown.team_code) == ("Player 999", None, None)
     summary = result.managers[0]
     assert (summary.transfers, summary.hits, summary.hit_cost) == (4, 1, 4)

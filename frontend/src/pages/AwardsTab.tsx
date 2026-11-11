@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchLeagueAwards, retryNetworkErrors, type Award, type LeagueAwards, type Manager } from '../api'
 import { AWARDS, awardNote } from '../awards'
+import { PlayerPhoto } from '../components/PlayerPhoto'
 import { ErrorCard, Loading } from '../components/Status'
 import { useLeague } from './leagueContext'
 
@@ -109,11 +110,14 @@ function AwardCard({ award, managers }: { award: Award; managers: Map<number, Ma
         {award.winners.map((w) => {
           const m = managers.get(w.entry_id)
           return (
-            <li key={`${w.entry_id}-${w.player?.id ?? ''}`}>
-              <Link to={`../manager/${w.entry_id}`} className="block truncate font-medium text-accent">
-                {m?.team_name ?? `Manager ${w.entry_id}`}
-              </Link>
-              <p className="text-sm text-ink-2">{meta.describe(w)}</p>
+            <li key={`${w.entry_id}-${w.player?.id ?? ''}`} className="flex items-center gap-3">
+              {w.player && <PlayerPhoto player={w.player} size={44} />}
+              <div className="min-w-0 flex-1">
+                <Link to={`../manager/${w.entry_id}`} className="block truncate font-medium text-accent">
+                  {m?.team_name ?? `Manager ${w.entry_id}`}
+                </Link>
+                <p className="text-sm text-ink-2">{meta.describe(w)}</p>
+              </div>
             </li>
           )
         })}

@@ -58,6 +58,8 @@ export interface Player {
   name: string
   team: string
   position: string
+  photo_code: number | null
+  team_code: number | null
 }
 
 export type TransferKind = 'free' | 'hit' | 'wildcard' | 'free_hit'
