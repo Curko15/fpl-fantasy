@@ -19,6 +19,9 @@ class Player(BaseModel):
     name: str
     team: str
     position: str
+    # Image codes, for the photo and kit URLs the frontend builds (None if unknown)
+    photo_code: int | None = None
+    team_code: int | None = None
 
 
 class Transfer(BaseModel):
@@ -46,6 +49,7 @@ class LeagueTransfers(BaseModel):
 
 def players_by_id(bootstrap: dict[str, Any]) -> dict[int, Player]:
     teams = {t["id"]: t["short_name"] for t in bootstrap["teams"]}
+    team_codes = {t["id"]: t.get("code") for t in bootstrap["teams"]}
     positions = {p["id"]: p["singular_name_short"] for p in bootstrap["element_types"]}
     return {
         e["id"]: Player(
@@ -53,6 +57,8 @@ def players_by_id(bootstrap: dict[str, Any]) -> dict[int, Player]:
             name=e["web_name"],
             team=teams.get(e["team"], "?"),
             position=positions.get(e["element_type"], "?"),
+            photo_code=e.get("code"),
+            team_code=team_codes.get(e["team"]),
         )
         for e in bootstrap["elements"]
     }

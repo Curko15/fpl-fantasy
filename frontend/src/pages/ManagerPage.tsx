@@ -11,6 +11,7 @@ import {
 } from '../api'
 import { chipLabel } from '../chips'
 import { ErrorCard, Loading } from '../components/Status'
+import { PlayerPhoto } from '../components/PlayerPhoto'
 import { Badge, TransferCard } from '../components/TransferCard'
 import { groupTransfers } from '../transfers'
 import { useLeague } from './leagueContext'
@@ -137,28 +138,35 @@ function Contributors({ contributors }: { contributors: Contributor[] }) {
         {shown.map((c, i) => {
           const base = c.points - c.captain_points
           return (
-            <li key={c.player.id} className="px-3 py-2.5">
-              <div className="flex items-baseline gap-2">
-                <span className="w-5 shrink-0 text-xs tabular-nums text-muted">{i + 1}</span>
-                <span className="min-w-0 flex-1 truncate font-medium">
-                  {c.player.name}
-                  <span className="ml-1.5 text-xs font-normal text-muted">
-                    {c.player.team} · {c.player.position}
+            <li key={c.player.id} className="flex items-center gap-3 px-3 py-2.5">
+              <span className="relative shrink-0">
+                <PlayerPhoto player={c.player} size={40} />
+                <span className="absolute -top-1 -left-1 flex size-4 items-center justify-center rounded-full bg-card text-[10px] font-semibold tabular-nums text-muted ring-1 ring-line">
+                  {i + 1}
+                </span>
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {c.player.name}
+                    <span className="ml-1.5 text-xs font-normal text-muted">
+                      {c.player.team} · {c.player.position}
+                    </span>
                   </span>
-                </span>
-                <span className="shrink-0 font-semibold tabular-nums">{c.points}</span>
-              </div>
-              <div className="mt-1.5 flex items-center gap-2 pl-7">
-                <div className="flex h-1.5 flex-1 gap-0.5" aria-hidden>
-                  <div className="rounded-full bg-accent" style={{ width: `${(Math.max(base, 0) / max) * 100}%` }} />
-                  {c.captain_points > 0 && (
-                    <div className="rounded-full bg-accent/40" style={{ width: `${(c.captain_points / max) * 100}%` }} />
-                  )}
+                  <span className="shrink-0 font-semibold tabular-nums">{c.points}</span>
                 </div>
-                <span className="w-32 shrink-0 text-right text-[11px] text-muted">
-                  {c.captain_points > 0 ? `${c.captain_points} from (C) · ` : ''}
-                  {c.starts} GW{c.starts === 1 ? '' : 's'}
-                </span>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="flex h-1.5 flex-1 gap-0.5" aria-hidden>
+                    <div className="rounded-full bg-accent" style={{ width: `${(Math.max(base, 0) / max) * 100}%` }} />
+                    {c.captain_points > 0 && (
+                      <div className="rounded-full bg-accent/40" style={{ width: `${(c.captain_points / max) * 100}%` }} />
+                    )}
+                  </div>
+                  <span className="shrink-0 text-right text-[11px] text-muted">
+                    {c.captain_points > 0 ? `${c.captain_points} from (C) · ` : ''}
+                    {c.starts} GW{c.starts === 1 ? '' : 's'}
+                  </span>
+                </div>
               </div>
             </li>
           )
@@ -194,7 +202,7 @@ function GameweekLog({ gameweeks }: { gameweeks: GameweekDetail[] }) {
               <th scope="col" className="w-14 py-2 text-right font-medium">
                 Rank
               </th>
-              <th scope="col" className="py-2 pl-4 font-medium">
+              <th scope="col" className="py-2 pl-3 font-medium">
                 Captain
               </th>
               <th scope="col" className="w-14 py-2 pr-3 text-right font-medium">
@@ -222,16 +230,16 @@ function GameweekLog({ gameweeks }: { gameweeks: GameweekDetail[] }) {
                       </div>
                     )}
                   </td>
-                  <td className="min-w-0 py-2 pl-4">
-                    <div className="truncate">
-                      {g.captain ? (
-                        <>
-                          {g.captain.name} <span className="tabular-nums text-muted">{g.captain_points}</span>
-                        </>
-                      ) : (
-                        <span className="text-muted">–</span>
-                      )}
-                    </div>
+                  <td className="min-w-0 py-2 pl-3">
+                    {g.captain ? (
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <PlayerPhoto player={g.captain} size={24} />
+                        <span className="truncate">{g.captain.name}</span>
+                        <span className="shrink-0 tabular-nums text-muted">{g.captain_points}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted">–</span>
+                    )}
                     {g.chip && (
                       <div className="mt-0.5">
                         <Badge tone="chip">{chipLabel(g.chip).label}</Badge>

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { formatPrice } from '../api'
+import { formatPrice, type Player } from '../api'
+import { PlayerPhoto } from './PlayerPhoto'
 import { CHIP_LABEL, type ManagerGameweek } from '../transfers'
 
 export function TransferCard({ card, title }: { card: ManagerGameweek; title?: ReactNode }) {
@@ -21,18 +22,13 @@ export function TransferCard({ card, title }: { card: ManagerGameweek; title?: R
         {transfers.map((t) => (
           <li
             key={`${t.time}-${t.player_in.id}`}
-            className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-2"
+            className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 py-2.5"
           >
-            <PlayerCell direction="out" name={t.player_out.name} meta={`${t.player_out.team} · ${formatPrice(t.out_cost)}`} />
+            <PlayerCell direction="out" player={t.player_out} price={t.out_cost} />
             <span aria-hidden className="text-muted">
               →
             </span>
-            <PlayerCell
-              direction="in"
-              name={t.player_in.name}
-              meta={`${t.player_in.team} · ${formatPrice(t.in_cost)}`}
-              hit={t.kind === 'hit'}
-            />
+            <PlayerCell direction="in" player={t.player_in} price={t.in_cost} hit={t.kind === 'hit'} />
           </li>
         ))}
       </ul>
@@ -42,30 +38,43 @@ export function TransferCard({ card, title }: { card: ManagerGameweek; title?: R
 
 function PlayerCell({
   direction,
-  name,
-  meta,
+  player,
+  price,
   hit = false,
 }: {
   direction: 'in' | 'out'
-  name: string
-  meta: string
+  player: Player
+  price: number
   hit?: boolean
 }) {
   const out = direction === 'out'
   return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-1">
-        <span className={`text-[10px] ${out ? 'text-down' : 'text-up'}`} aria-label={out ? 'Out' : 'In'}>
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="relative shrink-0">
+        <PlayerPhoto player={player} size={40} className={out ? 'opacity-70 grayscale' : ''} />
+        <span
+          className={`absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full text-[8px] text-card ring-2 ring-card ${
+            out ? 'bg-down' : 'bg-up'
+          }`}
+          role="img"
+          aria-label={out ? 'Out' : 'In'}
+        >
           {out ? '▼' : '▲'}
         </span>
-        <span className="truncate text-sm font-medium">{name}</span>
-        {hit && (
-          <span className="shrink-0 text-[10px] font-semibold text-down" title="Paid for with a points hit">
-            HIT
-          </span>
-        )}
+      </span>
+      <div className="min-w-0">
+        <div className="flex items-center gap-1">
+          <span className={`truncate text-sm font-medium ${out ? 'text-ink-2' : ''}`}>{player.name}</span>
+          {hit && (
+            <span className="shrink-0 text-[10px] font-semibold text-down" title="Paid for with a points hit">
+              HIT
+            </span>
+          )}
+        </div>
+        <div className="truncate text-xs text-muted">
+          {player.team} · {formatPrice(price)}
+        </div>
       </div>
-      <div className="truncate pl-3.5 text-xs text-muted">{meta}</div>
     </div>
   )
 }

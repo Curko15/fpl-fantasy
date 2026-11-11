@@ -19,10 +19,10 @@ BOOTSTRAP: dict[str, Any] = {
         {"name": "wildcard", "number": 1, "start_event": 2, "stop_event": 19},
         {"name": "bboost", "number": 2, "start_event": 1, "stop_event": 38},
     ],
-    "teams": [{"id": 1, "short_name": "LIV"}],
+    "teams": [{"id": 1, "short_name": "LIV", "code": 14}],
     "element_types": [{"id": 3, "singular_name_short": "MID"}],
     "elements": [
-        {"id": i, "web_name": name, "team": 1, "element_type": 3}
+        {"id": i, "web_name": name, "team": 1, "element_type": 3, "code": 1000 + i}
         for i, name in [(1, "Salah"), (2, "Saka"), (3, "Palmer"), (4, "Bench"), (5, "Sub")]
     ],
 }
