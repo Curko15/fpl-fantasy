@@ -48,3 +48,28 @@ body {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
+
+/* Loading states fade in after a beat, so fast loads don't flash a placeholder. */
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.appear-soon {
+  animation: appear 0.2s ease-out 0.12s both;
+}
+
+.appear-late {
+  animation: appear 0.3s ease-out 1s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appear-soon,
+  .appear-late {
+    animation-duration: 0s;
+  }
+}

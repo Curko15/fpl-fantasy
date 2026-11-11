@@ -1,0 +1,15 @@
+{
+  "name": "FPL League Tracker",
+  "short_name": "League Tracker",
+  "description": "Follow everything that happens in your FPL mini-league.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#121211",
+  "theme_color": "#37003c",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

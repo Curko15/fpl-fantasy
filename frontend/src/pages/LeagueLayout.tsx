@@ -1,11 +1,12 @@
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useMatch, useParams } from 'react-router-dom'
 import { ArrowLeftRight, ChartLine, Trophy, Zap, type LucideIcon } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
 import { useQuery } from '@tanstack/react-query'
 import { ApiError, fetchLeague, retryNetworkErrors } from '../api'
 import { rememberLeague } from '../recentLeagues'
-import { ErrorCard, Loading } from '../components/Status'
+import { ErrorCard } from '../components/Status'
+import { Bone, PageSkeleton, StandingsSkeleton } from '../components/Skeleton'
 import type { LeagueContext } from './leagueContext'
 
 function formatUpdated(iso: string): string {
@@ -72,12 +73,9 @@ export default function LeagueLayout() {
   if (!data) {
     return (
       <>
-        <AppHeader title="Loading league…" />
+        <AppHeader title={<Bone className="h-4 w-44" />} subtitle={<Bone className="mt-1.5 h-3 w-56" />} />
         <main className={shell}>
-          <Loading
-            title="Loading league…"
-            hint="The first visit fetches every manager's history from FPL and can take a few seconds."
-          />
+          <StandingsSkeleton hint="First visit: fetching every manager's history from FPL. This can take a few seconds." />
         </main>
       </>
     )
@@ -135,7 +133,9 @@ export default function LeagueLayout() {
       </nav>
 
       <main className={shell}>
-        <Outlet context={{ league: data } satisfies LeagueContext} />
+        <Suspense fallback={<PageSkeleton />}>
+          <Outlet context={{ league: data } satisfies LeagueContext} />
+        </Suspense>
       </main>
 
       <BottomTabs />

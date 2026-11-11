@@ -1,16 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ApiError } from '../api'
 
-export function Loading({ title, hint }: { title: string; hint?: string }) {
-  return (
-    <div className="mt-16 flex flex-col items-center text-center" role="status">
-      <div className="size-8 animate-spin rounded-full border-2 border-line border-t-accent" />
-      <p className="mt-4 font-medium">{title}</p>
-      {hint && <p className="mt-1 max-w-xs text-sm text-muted">{hint}</p>}
-    </div>
-  )
-}
-
 export function ErrorCard({
   error,
   onRetry,

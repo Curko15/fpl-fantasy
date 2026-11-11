@@ -10,7 +10,8 @@ import {
   type Manager,
 } from '../api'
 import { chipLabel } from '../chips'
-import { ErrorCard, Loading } from '../components/Status'
+import { ErrorCard } from '../components/Status'
+import { ManagerSkeleton } from '../components/Skeleton'
 import { PlayerPhoto } from '../components/PlayerPhoto'
 import { Badge, TransferCard } from '../components/TransferCard'
 import { groupTransfers } from '../transfers'
@@ -50,7 +51,7 @@ export default function ManagerPage() {
         <ErrorCard title="Can't load this manager" error={query.error} onRetry={() => query.refetch()} />
       )}
       {query.isPending && (
-        <Loading title="Loading team history…" hint="Fetching every gameweek's team from FPL." />
+        <ManagerSkeleton />
       )}
       {query.data && (
         <>
