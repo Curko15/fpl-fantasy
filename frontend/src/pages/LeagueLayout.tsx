@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
-import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useMatch, useParams } from 'react-router-dom'
+import { ArrowLeftRight, ChartLine, Trophy, Zap, type LucideIcon } from 'lucide-react'
+import { AppHeader } from '../components/AppHeader'
 import { useQuery } from '@tanstack/react-query'
 import { ApiError, fetchLeague, retryNetworkErrors } from '../api'
 import { rememberLeague } from '../recentLeagues'
@@ -14,27 +16,23 @@ function formatUpdated(iso: string): string {
   })
 }
 
-const TABS = [
-  { to: '', label: 'Overview', end: true },
-  { to: 'transfers', label: 'Transfers', end: false },
-  { to: 'chips', label: 'Chips', end: false },
-  { to: 'awards', label: 'Awards', end: false },
+const TABS: { to: string; label: string; end: boolean; Icon: LucideIcon }[] = [
+  { to: '', label: 'Overview', end: true, Icon: ChartLine },
+  { to: 'transfers', label: 'Transfers', end: false, Icon: ArrowLeftRight },
+  { to: 'chips', label: 'Chips', end: false, Icon: Zap },
+  { to: 'awards', label: 'Awards', end: false, Icon: Trophy },
 ]
 
-function BackLink() {
-  return (
-    <Link to="/" className="-ml-2 inline-flex h-11 items-center px-2 text-sm font-medium text-ink-2">
-      ← Leagues
-    </Link>
-  )
-}
-
+// Content scrolls under the sticky header (and the top tabs from sm up). Sticky
+// headings inside tabs sit at top-(--sticky-top).
 const shell =
-  'mx-auto max-w-3xl px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]'
+  'mx-auto max-w-3xl px-4 pt-5 [--sticky-top:calc(3.5rem+1px+env(safe-area-inset-top))] sm:[--sticky-top:calc(6.5rem+2px+env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-12'
 
 export default function LeagueLayout() {
   const leagueId = Number(useParams().leagueId)
   const valid = Number.isSafeInteger(leagueId) && leagueId > 0
+  const { pathname } = useLocation()
+  const managerMatch = useMatch('/league/:leagueId/manager/:entryId')
 
   const query = useQuery({
     queryKey: ['league', leagueId],
@@ -52,69 +50,133 @@ export default function LeagueLayout() {
     }
   }, [data])
 
+  // Like an app: switching tab or opening a manager starts at the top.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
   if (!valid || query.isError) {
     return (
-      <main className={shell}>
-        <BackLink />
-        <ErrorCard
-          error={valid ? query.error : new ApiError('not_found', "That doesn't look like a league ID.")}
-          onRetry={valid ? () => query.refetch() : undefined}
-        />
-      </main>
+      <>
+        <AppHeader title="League" />
+        <main className={shell}>
+          <ErrorCard
+            error={valid ? query.error : new ApiError('not_found', "That doesn't look like a league ID.")}
+            onRetry={valid ? () => query.refetch() : undefined}
+          />
+        </main>
+      </>
     )
   }
 
   if (!data) {
     return (
-      <main className={shell}>
-        <BackLink />
-        <Loading
-          title="Loading league…"
-          hint="The first visit fetches every manager's history from FPL and can take a few seconds."
-        />
-      </main>
+      <>
+        <AppHeader title="Loading league…" />
+        <main className={shell}>
+          <Loading
+            title="Loading league…"
+            hint="The first visit fetches every manager's history from FPL and can take a few seconds."
+          />
+        </main>
+      </>
     )
   }
 
-  return (
-    <main className={shell}>
-      <BackLink />
-      <header className="mt-1">
-        <h1 className="text-2xl font-bold tracking-tight break-words">{data.league.name}</h1>
-        <p className="mt-1 text-xs text-muted">
-          {data.managers.length} managers
-          {data.current_event && <> · GW{data.current_event}</>} · Updated {formatUpdated(data.last_updated)}
-        </p>
-      </header>
+  const manager = managerMatch
+    ? data.managers.find((m) => m.entry_id === Number(managerMatch.params.entryId))
+    : undefined
 
+  return (
+    <>
+      {managerMatch ? (
+        <AppHeader
+          title={manager?.team_name ?? 'Manager'}
+          subtitle={data.league.name}
+          back={{ to: `/league/${data.league.id}`, label: `Back to ${data.league.name}` }}
+        />
+      ) : (
+        <AppHeader
+          title={data.league.name}
+          subtitle={
+            <>
+              {data.managers.length} managers
+              {data.current_event && <> · GW{data.current_event}</>} · Updated {formatUpdated(data.last_updated)}
+            </>
+          }
+        />
+      )}
+
+      {/* From sm up: tabs under the header. Phones get the bottom bar instead. */}
       <nav
         aria-label="League sections"
-        className="sticky top-0 z-10 -mx-4 mt-3 overflow-x-auto border-b border-line bg-surface/95 px-4 backdrop-blur [scrollbar-width:none]"
+        className="sticky top-[calc(3.5rem+1px+env(safe-area-inset-top))] z-10 hidden border-b border-line bg-surface/90 backdrop-blur-md sm:block"
       >
-        <ul className="flex gap-1">
-          {TABS.map((tab) => (
-            <li key={tab.label}>
+        <ul className="mx-auto flex max-w-3xl gap-1 px-2">
+          {TABS.map(({ to, label, end, Icon }) => (
+            <li key={label}>
               <NavLink
-                to={tab.to}
-                end={tab.end}
+                to={to}
+                end={end}
                 className={({ isActive }) =>
-                  `relative flex h-12 items-center px-3 text-sm font-medium whitespace-nowrap ${
+                  `relative flex h-12 items-center gap-2 px-3 text-sm font-medium whitespace-nowrap ${
                     isActive
                       ? 'text-ink after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent'
-                      : 'text-ink-2'
+                      : 'text-ink-2 hover:text-ink'
                   }`
                 }
               >
-                {tab.label}
+                <Icon size={16} aria-hidden />
+                {label}
               </NavLink>
             </li>
           ))}
         </ul>
       </nav>
 
-      <div className="mt-5">
+      <main className={shell}>
         <Outlet context={{ league: data } satisfies LeagueContext} />
-      </div>
-    </main>
+      </main>
+
+      <BottomTabs />
+    </>
+  )
+}
+
+function BottomTabs() {
+  return (
+    <nav
+      aria-label="League sections"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md sm:hidden"
+    >
+      <ul className="grid grid-cols-4">
+        {TABS.map(({ to, label, end, Icon }) => (
+          <li key={label}>
+            <NavLink
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `group flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium ${
+                  isActive ? 'text-ink' : 'text-muted'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`flex h-7 w-14 items-center justify-center rounded-full transition-colors ${
+                      isActive ? 'bg-accent/15 text-accent' : 'group-active:bg-line/60'
+                    }`}
+                  >
+                    <Icon size={20} strokeWidth={isActive ? 2.25 : 1.75} aria-hidden />
+                  </span>
+                  {label}
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
   )
 }

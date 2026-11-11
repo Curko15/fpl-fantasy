@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Logo } from '../components/Logo'
 import { parseLeagueId } from '../parseLeagueId'
 import { forgetLeague, getRecentLeagues } from '../recentLeagues'
 
@@ -21,7 +22,8 @@ export default function HomePage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pt-[max(3rem,env(safe-area-inset-top))] pb-10">
-      <h1 className="text-3xl font-bold tracking-tight">FPL League Tracker</h1>
+      <Logo size={52} />
+      <h1 className="mt-5 text-3xl font-bold tracking-tight">FPL League Tracker</h1>
       <p className="mt-2 text-ink-2">
         Rank history, transfers and chips for your whole mini-league, in one place.
       </p>

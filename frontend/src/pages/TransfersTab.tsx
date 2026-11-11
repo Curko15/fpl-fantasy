@@ -97,7 +97,7 @@ export default function TransfersTab() {
 
         {visible.map((gw) => (
           <section key={gw.event} className="mt-6" aria-label={`Gameweek ${gw.event}`}>
-            <h3 className="sticky top-12 z-[5] -mx-4 bg-surface/95 px-4 py-2 text-sm font-semibold backdrop-blur">
+            <h3 className="sticky top-(--sticky-top) z-[5] -mx-4 bg-surface/95 px-4 py-2 text-sm font-semibold backdrop-blur">
               Gameweek {gw.event}
               <span className="font-normal text-muted">
                 {' '}
