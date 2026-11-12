@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useLeagueTransfers } from '../queries'
 import {
-  fetchLeagueTransfers,
   fetchManager,
   retryNetworkErrors,
   type Contributor,
@@ -255,12 +255,7 @@ function GameweekLog({ gameweeks }: { gameweeks: GameweekDetail[] }) {
 
 function ManagerTransfers({ manager }: { manager: Manager }) {
   const { league } = useLeague()
-  const query = useQuery({
-    queryKey: ['league', league.league.id, 'transfers'],
-    queryFn: () => fetchLeagueTransfers(league.league.id),
-    staleTime: 5 * 60_000,
-    retry: retryNetworkErrors,
-  })
+  const query = useLeagueTransfers(league.league.id)
   const [showAll, setShowAll] = useState(false)
 
   const gameweeks = useMemo(() => {

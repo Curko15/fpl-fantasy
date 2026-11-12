@@ -1,4 +1,4 @@
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useMemo, useState } from 'react'
 import {
   CartesianGrid,
   Line,
@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import type { Manager } from '../api'
+import { useIsDark } from '../theme'
 
 // Validated categorical palette (dataviz reference), fixed order, light/dark steps.
 const SERIES_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948']
@@ -18,18 +19,6 @@ const SERIES_DARK = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#00
 const MAX_SELECTED = SERIES_LIGHT.length
 const DEFAULT_SELECTED = 3
 const COLLAPSED_CHIPS = 12
-
-const darkQuery = '(prefers-color-scheme: dark)'
-function useDarkMode(): boolean {
-  return useSyncExternalStore(
-    (cb) => {
-      const mq = window.matchMedia(darkQuery)
-      mq.addEventListener('change', cb)
-      return () => mq.removeEventListener('change', cb)
-    },
-    () => window.matchMedia(darkQuery).matches,
-  )
-}
 
 type Mode = 'position' | 'points'
 
@@ -42,11 +31,11 @@ function positionTicks(count: number): number[] {
 }
 
 export default function LeagueChart({ managers, events }: { managers: Manager[]; events: number[] }) {
-  const dark = useDarkMode()
+  const dark = useIsDark()
   const series = dark ? SERIES_DARK : SERIES_LIGHT
   const theme = dark
-    ? { muted: '#3a3a37', grid: '#2e2e2c', axis: '#9a998f' }
-    : { muted: '#d6d5d0', grid: '#ecebe7', axis: '#6f6e69' }
+    ? { muted: '#3a3e45', grid: '#24272d', axis: '#9ba1aa' }
+    : { muted: '#d9d7d0', grid: '#ecebe6', axis: '#5f6068' }
 
   const [mode, setMode] = useState<Mode>('position')
   const [showAll, setShowAll] = useState(false)

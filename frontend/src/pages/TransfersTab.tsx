@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { fetchLeagueTransfers, retryNetworkErrors, type Manager } from '../api'
+import { useLeagueTransfers } from '../queries'
+import type { Manager } from '../api'
 import { TransferCard } from '../components/TransferCard'
 import { groupTransfers } from '../transfers'
 import { ErrorCard } from '../components/Status'
@@ -17,12 +17,7 @@ export default function TransfersTab() {
   const [params, setParams] = useSearchParams()
   const [pages, setPages] = useState(1)
 
-  const query = useQuery({
-    queryKey: ['league', league.league.id, 'transfers'],
-    queryFn: () => fetchLeagueTransfers(league.league.id),
-    staleTime: 5 * 60_000,
-    retry: retryNetworkErrors,
-  })
+  const query = useLeagueTransfers(league.league.id)
 
   const managers = useMemo(() => new Map(league.managers.map((m) => [m.entry_id, m])), [league.managers])
   const managerFilter = Number(params.get('manager')) || null

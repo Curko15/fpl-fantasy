@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeftRight, ArrowRight, ChartLine, ChevronDown, Trophy, X, Zap } from 'lucide-react'
 import { Logo } from '../components/Logo'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { parseLeagueId } from '../parseLeagueId'
 import { forgetLeague, getRecentLeagues } from '../recentLeagues'
 
@@ -31,7 +32,8 @@ export default function HomePage() {
       <main className="relative mx-auto flex min-h-dvh max-w-md flex-col px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <div className="flex items-center gap-2">
           <Logo size={32} />
-          <span className="font-semibold">League Tracker</span>
+          <span className="flex-1 font-semibold">League Tracker</span>
+          <ThemeToggle />
         </div>
 
         <h1 className="mt-10 text-[2rem] leading-tight font-bold tracking-tight">Your mini-league, all in one place.</h1>
