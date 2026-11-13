@@ -13,8 +13,9 @@ Read this first in a new session, together with `docs/PLAN.md`.
 | #15 | `my-team-everywhere` | **open, stacked on #14** | "You" highlights on every tab, manager page restyle with "This is my team" and weeks-vs-league |
 | #16 | `team-bar` | **open, stacked on #15** | Always-on "Your team" switcher bar at the top of every league tab |
 | #17 | `matchday-recap` | **open, stacked on #16** | Matchday recap as the first view of the Awards tab |
+| #18 | `head-to-head` | **open, stacked on #17** | Head-to-head page comparing two managers |
 
-Merge #12, then #13, #14, #15, #16 and #17, in that order. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
+Merge #12, then #13, #14, #15, #16, #17 and #18, in that order. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
 
 ## Design decisions (all chosen by the user from canvas prototypes)
 
@@ -42,12 +43,19 @@ Prototype canvas (private to the user): https://claude.ai/artifact/7yzcePz8fTcqb
 - UI in `pages/RecapView.tsx`: headline card with podium, "The week in moments" timeline, "The rest" of the table (my row pinned). Prototype C's look was adapted to Floodlight tokens.
 - Idea for later: a recap teaser card on the Overview linking to it.
 
+## Head-to-head (done in #18)
+
+- Route `/league/:id/compare?a=&b=` (`pages/ComparePage.tsx`), inside the league layout: back-button header "Head-to-head", no team bar. Defaults: A = my team or the leader, B = the manager directly above A (2nd if A leads). Each picker disables the other side's team.
+- Maths in `src/headToHead.ts` (tested): `headToHeadWeeks` (weekly scores, winner, season gap; a mid-season joiner's missing GWs are null and count 0 towards the gap), `headToHeadRecord`, `sideStats`, `defaultPair`, `gapSummary`.
+- Sections: hero with the gap, GW record + biggest wins, points-gap chart (A colour above zero, B below), side-by-side stats, GW list with captains (manager detail query, same key as the manager page).
+- Colours: A = accent, B = `chartColors.rivals[0]` (validated in both themes).
+- Entry points: "Compare with …" on the manager page hero, and a row under the Overview table.
+
 ## Backlog
 
-1. **Head-to-head**: pick two managers, compare points, ranks, transfers, captains and chips side by side.
-2. **Live gameweek view**: live scores and rank changes while a GW is in progress (needs more frequent live-points fetching in the backend).
-3. **Polish**: lazy-load the chart code (Overview chunk is ~400 KB, mostly Recharts); mark managers who joined mid-season in charts and the race.
-4. **Deployment** (postponed by the user, 2026-11-13). Agreed plan, all free tiers:
+1. **Live gameweek view**: live scores and rank changes while a GW is in progress (needs more frequent live-points fetching in the backend).
+2. **Polish**: lazy-load the chart code (Overview chunk is ~400 KB, mostly Recharts); mark managers who joined mid-season in charts and the race.
+3. **Deployment** (postponed by the user, 2026-11-13). Agreed plan, all free tiers:
    - Vercel Hobby (frontend), Render free web service (backend), Neon free Postgres (`FPL_DATABASE_URL`).
    - Render free sleeps after ~15 min idle: 30–60 s cold start, and the in-process 06:00 refresh won't fire while asleep. Fix with a free scheduled ping (GitHub Actions cron or cron-job.org). Always-on Render is ~$7/month if needed.
    - User: create the three accounts with GitHub, copy the Neon connection string, connect the repo.
