@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Swords } from 'lucide-react'
+import { ChevronRight, Radio, Swords } from 'lucide-react'
 import type { Award, AwardWinner, LeagueOverview, Manager } from '../api'
 import { AWARDS, awardHeadline, awardStory } from '../awards'
 import { chipLabel } from '../chips'
@@ -153,6 +153,16 @@ function GameweekHero({ league }: { league: LeagueOverview }) {
           </div>
         ))}
       </dl>
+      {!finished && (
+        <Link
+          to="live"
+          className="mt-3 flex h-12 items-center gap-3 rounded-2xl bg-accent px-3.5 text-sm font-semibold text-accent-ink"
+        >
+          <Radio size={18} aria-hidden className="shrink-0" />
+          <span className="min-w-0 flex-1 truncate">Live scores and table</span>
+          <ChevronRight size={18} aria-hidden className="shrink-0" />
+        </Link>
+      )}
     </section>
   )
 }

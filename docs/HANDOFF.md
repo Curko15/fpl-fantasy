@@ -14,8 +14,9 @@ Read this first in a new session, together with `docs/PLAN.md`.
 | #16 | `team-bar` | **open, stacked on #15** | Always-on "Your team" switcher bar at the top of every league tab |
 | #17 | `matchday-recap` | **open, stacked on #16** | Matchday recap as the first view of the Awards tab |
 | #18 | `head-to-head` | **open, stacked on #17** | Head-to-head page comparing two managers |
+| #19 | `live-gameweek` | **open, stacked on #18** | Live gameweek view: live scores and table while a GW is being played |
 
-Merge #12, then #13, #14, #15, #16, #17 and #18, in that order. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
+Merge #12, then #13, #14, #15, #16, #17, #18 and #19, in that order. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
 
 ## Design decisions (all chosen by the user from canvas prototypes)
 
@@ -51,11 +52,18 @@ Prototype canvas (private to the user): https://claude.ai/artifact/7yzcePz8fTcqb
 - Colours: A = accent, B = `chartColors.rivals[0]` (validated in both themes).
 - Entry points: "Compare with …" on the manager page hero, and a row under the Overview table.
 
+## Live gameweek (done in #19)
+
+- Endpoint `GET /api/leagues/{id}/live` (`backend/app/live.py`, `build_live_league`). While the current GW is in progress it returns per manager: live GW points (picks × FPL live points; the picks' multipliers carry captain, Triple Captain and Bench Boost) minus hits, live total (league total before the GW + live points), live rank and rank before the GW (ties share a rank), captain + captain points, chip, and players left (counting players whose club still has a match to kick off). No GW in progress → `{"live": false, "event": <current>, "managers": []}`.
+- Provisional, before auto-subs: FPL only applies auto-subs and the vice-captain once the GW is processed.
+- Caching (`FplStore.live_event` / `event_picks`): `/event/{gw}/live/` + `/fixtures/?event=` are fetched at most once a minute per GW however many people watch (in memory, under a lock), and also stored as provisional `LiveRow` points, so transfer points and awards stay fresher during a GW. Picks are fetched once per manager per GW and read from the DB after that. The live endpoint reads bootstrap with a 1 h max age, so a GW starting/finishing is noticed within the hour.
+- UI: `/league/:id/live` (`pages/LivePage.tsx`), a detail page with a back header. Reached from the "Live scores and table" button in the Overview gameweek card, shown only while the GW is in progress. Hero = my team (or the leader): live score, live rank + movement, gap to the team above; then the live table (rank, movement since the deadline, captain, chip/hit, GW points + players left, total), my row highlighted. Refetches every 60 s only while live (react-query pauses it in a hidden tab). Helpers in `src/live.ts` (tested).
+- Testing while nothing is live: `?event=N` (endpoint and page, e.g. `/league/1700002/live?event=10`) shows the same view for an earlier GW of the league from stored points, marked "Finished", without auto refresh. Only GWs from the league start to the current one are accepted.
+
 ## Backlog
 
-1. **Live gameweek view**: live scores and rank changes while a GW is in progress (needs more frequent live-points fetching in the backend).
-2. **Polish**: lazy-load the chart code (Overview chunk is ~400 KB, mostly Recharts); mark managers who joined mid-season in charts and the race.
-3. **Deployment** (postponed by the user, 2026-11-13). Agreed plan, all free tiers:
+1. **Polish**: lazy-load the chart code (Overview chunk is ~400 KB, mostly Recharts); mark managers who joined mid-season in charts and the race.
+2. **Deployment** (postponed by the user, 2026-11-13). Agreed plan, all free tiers:
    - Vercel Hobby (frontend), Render free web service (backend), Neon free Postgres (`FPL_DATABASE_URL`).
    - Render free sleeps after ~15 min idle: 30–60 s cold start, and the in-process 06:00 refresh won't fire while asleep. Fix with a free scheduled ping (GitHub Actions cron or cron-job.org). Always-on Render is ~$7/month if needed.
    - User: create the three accounts with GitHub, copy the Neon connection string, connect the repo.

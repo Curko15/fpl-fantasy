@@ -78,6 +78,9 @@ class FplClient:
     async def event_live(self, event: int) -> dict[str, Any]:
         return await self.get(f"/event/{event}/live/")
 
+    async def fixtures(self, event: int) -> list[dict[str, Any]]:
+        return await self.get("/fixtures/", params={"event": event})
+
 
 def make_http_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(

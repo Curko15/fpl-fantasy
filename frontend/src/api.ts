@@ -195,3 +195,34 @@ async function getJson<T>(url: string): Promise<T> {
   }
   throw new ApiError('unknown', `Something went wrong (HTTP ${res.status}).`)
 }
+
+export interface LiveManager {
+  entry_id: number
+  player_name: string
+  team_name: string
+  /** Live league rank, and the rank before this gameweek. */
+  rank: number
+  pre_rank: number
+  /** Live gameweek points after hits (provisional, before auto-subs). */
+  points: number
+  transfers_cost: number
+  total: number
+  chip: string | null
+  captain: Player | null
+  captain_points: number
+  /** Counting players whose team still has a match to kick off. */
+  players_left: number
+}
+
+export interface LiveLeague {
+  event: number | null
+  /** True while `event` is being played. */
+  live: boolean
+  managers: LiveManager[]
+  updated_at: string | null
+}
+
+/** `event` shows an earlier gameweek the same way (for checking the page while nothing is live). */
+export function fetchLeagueLive(leagueId: number, event?: number): Promise<LiveLeague> {
+  return getJson(`/api/leagues/${leagueId}/live${event ? `?event=${event}` : ''}`)
+}

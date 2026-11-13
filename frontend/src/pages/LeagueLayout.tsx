@@ -37,8 +37,9 @@ export default function LeagueLayout() {
   const { pathname } = useLocation()
   const managerMatch = useMatch('/league/:leagueId/manager/:entryId')
   const compareMatch = useMatch('/league/:leagueId/compare')
+  const liveMatch = useMatch('/league/:leagueId/live')
   // Detail pages get a back button instead of the league title, and no team bar.
-  const detail = managerMatch !== null || compareMatch !== null
+  const detail = managerMatch !== null || compareMatch !== null || liveMatch !== null
 
   const query = useQuery({
     queryKey: ['league', leagueId],
@@ -94,7 +95,7 @@ export default function LeagueLayout() {
     <>
       {detail ? (
         <AppHeader
-          title={compareMatch ? 'Head-to-head' : (manager?.team_name ?? 'Manager')}
+          title={compareMatch ? 'Head-to-head' : liveMatch ? 'Live scores' : (manager?.team_name ?? 'Manager')}
           subtitle={data.league.name}
           back={{ to: `/league/${data.league.id}`, label: `Back to ${data.league.name}` }}
         />

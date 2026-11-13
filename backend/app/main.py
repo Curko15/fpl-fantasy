@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Path, Request
+from fastapi import FastAPI, Path, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -10,9 +10,10 @@ from app.config import settings
 from app.db import create_tables, make_engine, make_sessionmaker
 from app.fpl_client import FplClient, FplError, make_http_client
 from app.league import LeagueError, LeagueOverview, build_league_overview
+from app.live import LiveLeague, build_live_league
 from app.manager import ManagerDetail, build_manager_detail
 from app.refresh import start_scheduler
-from app.store import FplStore
+from app.store import BOOTSTRAP_MAX_AGE, FplStore
 from app.transfers import LeagueTransfers, build_league_transfers
 
 LeagueId = Path(gt=0, le=2_147_483_647)
@@ -129,3 +130,53 @@ async def get_league_awards(request: Request, league_id: int = LeagueId) -> Leag
     if awards.pending_events:
         store.spawn(("backfill", league_id), store.backfill_picks(league_id))
     return awards
+
+
+@app.get("/api/leagues/{league_id}/live", response_model=LiveLeague)
+async def get_league_live(
+    request: Request,
+    league_id: int = LeagueId,
+    event: int | None = Query(None, gt=0, le=60),
+) -> LiveLeague:
+    """Live scores and table for the gameweek being played.
+
+    Without `event`, returns `live: false` and no managers when no gameweek is in progress.
+    `event` shows the same view for an earlier gameweek of this league, from stored points
+    (used to check the page while nothing is live).
+    """
+    store = _store(request)
+    data = await store.league(league_id)
+    # Notice a gameweek starting or finishing within the hour.
+    bootstrap = await store.bootstrap(max_age=BOOTSTRAP_MAX_AGE)
+    overview = build_league_overview(data.standings, data.histories, bootstrap, data.fetched_at)
+    current = overview.current_event
+    in_progress = current is not None and not overview.current_event_finished
+    if event is None:
+        if not in_progress:
+            return LiveLeague(event=current, live=False, managers=[], updated_at=None)
+        event = current
+    elif current is None or not overview.league.start_event <= event <= current:
+        raise LeagueError(
+            "event_not_found", "That gameweek hasn't been played in this league.", 404
+        )
+
+    live = in_progress and event == current
+    if live:
+        live_event = await store.live_event(event)
+        points, fixtures, updated_at = live_event.points, live_event.fixtures, live_event.fetched_at
+    else:
+        points, fixtures, updated_at = (await store.live([event]))[event], [], data.fetched_at
+    # A past gameweek only has picks for managers who were playing by then.
+    entries = [
+        m.entry_id for m in overview.managers if live or any(h.event == event for h in m.history)
+    ]
+    return build_live_league(
+        overview,
+        event,
+        live=live,
+        bootstrap=bootstrap,
+        picks_by_entry=await store.event_picks(entries, event),
+        points=points,
+        fixtures=fixtures,
+        updated_at=updated_at,
+    )
