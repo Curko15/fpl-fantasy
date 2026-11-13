@@ -1,27 +1,20 @@
-import { useMemo, type ReactNode } from 'react'
+import { lazy, useMemo, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeftRight, ChevronDown } from 'lucide-react'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  type TooltipContentProps,
-} from 'recharts'
+import type { TooltipContentProps } from 'recharts'
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import { fetchManager, retryNetworkErrors, type GameweekDetail, type Manager, type ManagerDetail } from '../api'
 import { useChartColors } from '../chartColors'
 import { chipLabel } from '../chips'
+import { ChartSlot } from '../components/ChartSlot'
 import { PlayerPhoto } from '../components/PlayerPhoto'
 import { SectionHeading } from '../components/SectionHeading'
 import { Bone } from '../components/Skeleton'
 import { ErrorCard } from '../components/Status'
 import { YouTag } from '../components/YouTag'
+import { JoinedNote } from '../components/JoinedNote'
+import { joinedEvent } from '../joined'
 import {
   defaultPair,
   gapSummary,
@@ -35,6 +28,10 @@ import {
 import { useLeagueTransfers } from '../queries'
 import { ordinal } from '../seasonCharts'
 import { useLeague, useMe } from './leagueContext'
+
+// Recharts only loads when the chart is about to be seen (see ChartSlot).
+const loadGapArea = () => import('../components/GapArea')
+const GapArea = lazy(loadGapArea)
 
 interface Pair {
   a: Manager
@@ -98,7 +95,7 @@ export default function ComparePage() {
         onChange={choose}
         onSwap={() => choose({ a: b.entry_id, b: a.entry_id })}
       />
-      <Hero pair={pair} meId={meId} managerCount={league.managers.length} />
+      <Hero pair={pair} meId={meId} managerCount={league.managers.length} events={league.events} />
       {live && (
         <p className="-mt-4 rounded-xl bg-accent/10 px-3 py-2 text-xs text-ink-2">
           GW{league.current_event} is still being played, so its points can still change.
@@ -110,7 +107,7 @@ export default function ComparePage() {
         </p>
       ) : (
         <>
-          <Record pair={pair} record={headToHeadRecord(weeks)} />
+          <Record pair={pair} record={headToHeadRecord(weeks)} events={league.events} />
           <GapChart pair={pair} weeks={weeks} />
           {detailError && (
             <ErrorCard
@@ -218,18 +215,35 @@ function Picker({
 
 /* ---------- Hero ---------- */
 
-function Hero({ pair, meId, managerCount }: { pair: Pair; meId: number | null; managerCount: number }) {
+function Hero({
+  pair,
+  meId,
+  managerCount,
+  events,
+}: {
+  pair: Pair
+  meId: number | null
+  managerCount: number
+  events: number[]
+}) {
   const gap = pair.a.total - pair.b.total
   return (
     <section aria-label="Head-to-head summary" className="rounded-3xl border border-line bg-card p-5">
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-3">
-        <HeroSide manager={pair.a} color={pair.colorA} isMe={pair.a.entry_id === meId} managerCount={managerCount} />
+        <HeroSide
+          manager={pair.a}
+          color={pair.colorA}
+          isMe={pair.a.entry_id === meId}
+          managerCount={managerCount}
+          joined={joinedEvent(pair.a, events)}
+        />
         <div className="self-center pt-1 font-display text-sm font-bold text-muted">vs</div>
         <HeroSide
           manager={pair.b}
           color={pair.colorB}
           isMe={pair.b.entry_id === meId}
           managerCount={managerCount}
+          joined={joinedEvent(pair.b, events)}
           align="right"
         />
       </div>
@@ -245,12 +259,14 @@ function HeroSide({
   color,
   isMe,
   managerCount,
+  joined,
   align = 'left',
 }: {
   manager: Manager
   color: string
   isMe: boolean
   managerCount: number
+  joined: number | null
   align?: 'left' | 'right'
 }) {
   const right = align === 'right'
@@ -269,15 +285,18 @@ function HeroSide({
         {isMe && <YouTag />}
       </div>
       <div className="truncate text-xs text-muted">{manager.player_name}</div>
+      {joined !== null && <JoinedNote event={joined} className="block text-[11px]" />}
     </div>
   )
 }
 
 /* ---------- Record ---------- */
 
-function Record({ pair, record }: { pair: Pair; record: H2HRecord }) {
-  const joined = (m: Manager) => Math.min(...m.history.map((h) => h.event))
-  const late = [pair.a, pair.b].filter((m) => m.history.length && joined(m) > 1)
+function Record({ pair, record, events }: { pair: Pair; record: H2HRecord; events: number[] }) {
+  const late = [pair.a, pair.b].flatMap((m) => {
+    const event = joinedEvent(m, events)
+    return event === null ? [] : [{ m, event }]
+  })
   const { played } = record
   const segments = [
     { key: 'a', value: record.a, color: pair.colorA },
@@ -309,7 +328,7 @@ function Record({ pair, record }: { pair: Pair; record: H2HRecord }) {
         </div>
         {late.length > 0 && (
           <p className="mt-3 text-xs text-muted">
-            {late.map((m) => `${m.team_name} joined in GW${joined(m)}`).join(' · ')}, so {played} gameweek
+            {late.map(({ m, event }) => `${m.team_name} joined in GW${event}`).join(' · ')}, so {played} gameweek
             {played === 1 ? '' : 's'} count.
           </p>
         )}
@@ -350,21 +369,6 @@ function BiggestWin({ side, pair, record }: { side: Side; pair: Pair; record: H2
 /* ---------- Gap chart ---------- */
 
 function GapChart({ pair, weeks }: { pair: Pair; weeks: H2HWeek[] }) {
-  const colors = useChartColors()
-  const gaps = weeks.map((w) => w.gap)
-  const { ticks, domain } = gapAxis(gaps)
-  // Gradients run over each shape's own bounding box: the area spans the data and
-  // the zero baseline, the line only the data. Split both at zero: A above, B below.
-  const dataMax = Math.max(...gaps)
-  const dataMin = Math.min(...gaps)
-  const areaTop = Math.max(0, dataMax)
-  const areaBottom = Math.min(0, dataMin)
-  const split = areaTop === areaBottom ? 0.5 : areaTop / (areaTop - areaBottom)
-  const lineSplit = dataMax === dataMin ? 0.5 : Math.min(1, Math.max(0, dataMax / (dataMax - dataMin)))
-  // A flat line has a zero-height box, which would hide a gradient stroke.
-  const flatColor = dataMax > 0 ? pair.colorA : dataMax < 0 ? pair.colorB : colors.ink
-  const gradientId = `gap-${pair.a.entry_id}-${pair.b.entry_id}`
-
   function TooltipContent({ active, payload }: TooltipContentProps<ValueType, NameType>) {
     if (!active || !payload?.length) return null
     const w = payload[0].payload as H2HWeek
@@ -389,81 +393,23 @@ function GapChart({ pair, weeks }: { pair: Pair; weeks: H2HWeek[] }) {
       <SectionHeading id="gap-heading">Points gap over the season</SectionHeading>
       <div className="rounded-2xl border border-line bg-card px-1 pt-3 pb-1">
         <Legend color={pair.colorA}>{pair.a.team_name} ahead</Legend>
-        <div
+        <ChartSlot
           className="h-52 sm:h-64"
-          role="img"
-          aria-label={`Points gap between ${pair.a.team_name} and ${pair.b.team_name} after each gameweek`}
+          label={`Points gap between ${pair.a.team_name} and ${pair.b.team_name} after each gameweek`}
+          preload={loadGapArea}
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={weeks} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-              <defs>
-                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset={0} stopColor={pair.colorA} stopOpacity={0.28} />
-                  <stop offset={split} stopColor={pair.colorA} stopOpacity={0.06} />
-                  <stop offset={split} stopColor={pair.colorB} stopOpacity={0.06} />
-                  <stop offset={1} stopColor={pair.colorB} stopOpacity={0.28} />
-                </linearGradient>
-                <linearGradient id={`${gradientId}-line`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset={lineSplit} stopColor={pair.colorA} />
-                  <stop offset={lineSplit} stopColor={pair.colorB} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke={colors.grid} vertical={false} />
-              <XAxis
-                dataKey="event"
-                tick={{ fontSize: 11, fill: colors.axis }}
-                tickLine={false}
-                axisLine={false}
-                interval="preserveStartEnd"
-                minTickGap={16}
-                tickFormatter={(e) => `GW${e}`}
-              />
-              <YAxis
-                domain={domain}
-                ticks={ticks}
-                allowDecimals={false}
-                tick={{ fontSize: 11, fill: colors.axis }}
-                tickFormatter={(v: number) => (v > 0 ? `+${v}` : String(v))}
-                tickLine={false}
-                axisLine={false}
-                width={38}
-              />
-              <ReferenceLine y={0} stroke={colors.axis} strokeWidth={1} />
-              <Tooltip content={TooltipContent} cursor={{ stroke: colors.axis, strokeDasharray: '3 3' }} />
-              <Area
-                dataKey="gap"
-                type="monotone"
-                stroke={dataMax === dataMin ? flatColor : `url(#${gradientId}-line)`}
-                strokeWidth={2.5}
-                fill={`url(#${gradientId})`}
-                baseValue={0}
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 2, stroke: colors.card, fill: colors.ink }}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+          <GapArea
+            weeks={weeks}
+            colorA={pair.colorA}
+            colorB={pair.colorB}
+            gradientId={`gap-${pair.a.entry_id}-${pair.b.entry_id}`}
+            tooltip={TooltipContent}
+          />
+        </ChartSlot>
         <Legend color={pair.colorB}>{pair.b.team_name} ahead</Legend>
       </div>
     </section>
   )
-}
-
-/** Round ticks that always include 0, with a little headroom past the data. */
-function gapAxis(gaps: number[]): { ticks: number[]; domain: [number, number] } {
-  const max = Math.max(0, ...gaps)
-  const min = Math.min(0, ...gaps)
-  const range = Math.max(10, max - min)
-  const raw = range / 4
-  const magnitude = 10 ** Math.floor(Math.log10(raw))
-  const step = [1, 2, 5, 10].map((f) => f * magnitude).find((s) => s >= raw) ?? raw
-  const lo = min < 0 ? Math.floor((min - step * 0.15) / step) * step : 0
-  const hi = max > 0 ? Math.ceil((max + step * 0.15) / step) * step : 0
-  const domain: [number, number] = lo === hi ? [-step, step] : [lo, hi]
-  const ticks: number[] = []
-  for (let t = domain[0]; t <= domain[1]; t += step) ticks.push(t)
-  return { ticks, domain }
 }
 
 function Legend({ color, children }: { color: string; children: ReactNode }) {

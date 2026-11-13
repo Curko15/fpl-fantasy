@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import type { Manager } from '../api'
 import { useChartColors } from '../chartColors'
+import { joinedEvent } from '../joined'
 import { ordinal, scoreSpread, spreadStats, type WeekHighlight } from '../seasonCharts'
 
 const HEIGHT = 240
@@ -43,6 +44,8 @@ export default function ScoreSpread({
   const [active, setActive] = useState<number | null>(null)
   const weeks = useMemo(() => scoreSpread(managers, events, meId), [managers, events, meId])
   const stats = useMemo(() => spreadStats(weeks), [weeks])
+  const subjectManager = managers.find((m) => m.entry_id === meId)
+  const joined = subjectManager ? joinedEvent(subjectManager, events) : null
 
   if (weeks.length === 0) return null
 
@@ -173,7 +176,7 @@ export default function ScoreSpread({
       </div>
 
       <dl className="mt-2.5 grid grid-cols-3 gap-2">
-        <Stat label="Above median" value={`${stats.aboveMedian} / ${stats.played}`} note="gameweeks" tone="text-accent" />
+        <Stat label="Above median" value={`${stats.aboveMedian} / ${stats.played}`} note={joined === null ? 'gameweeks' : `since GW${joined}`} tone="text-accent" />
         <Highlight label="Best week" week={stats.best} />
         <Highlight label="Worst week" week={stats.worst} tone="text-down" />
       </dl>

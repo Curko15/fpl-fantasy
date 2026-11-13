@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Manager } from '../api'
 import { rankForm } from '../dashboard'
 import { useMe } from '../pages/leagueContext'
+import { lateJoiners } from '../joined'
+import { JoinedNote } from './JoinedNote'
 import { YouTag } from './YouTag'
 
 const COLLAPSED = 10
@@ -44,6 +46,7 @@ function RankSpark({ ranks, size }: { ranks: number[]; size: number }) {
 export default function StandingsTable({ managers, events }: { managers: Manager[]; events: number[] }) {
   const [expanded, setExpanded] = useState(false)
   const [meId] = useMe()
+  const late = useMemo(() => lateJoiners(managers, events), [managers, events])
   const shown = expanded ? managers : managers.slice(0, COLLAPSED)
   // Keep my row visible under the top 10 when the table is collapsed.
   const pinned = expanded ? undefined : managers.slice(COLLAPSED).find((m) => m.entry_id === meId)
@@ -51,6 +54,7 @@ export default function StandingsTable({ managers, events }: { managers: Manager
   function row(m: Manager) {
     const move = movement(m)
     const isMe = m.entry_id === meId
+    const joinedGw = late.get(m.entry_id) ?? null
     return (
       <li key={m.entry_id} className={`relative flex items-center gap-3 px-3.5 py-3 ${isMe ? 'bg-accent/8' : 'active:bg-raised'}`}>
         {isMe && <span aria-hidden className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-accent" />}
@@ -65,15 +69,22 @@ export default function StandingsTable({ managers, events }: { managers: Manager
             </Link>
             {isMe && <YouTag />}
           </div>
-          <div className="truncate text-xs text-muted">
-            {m.player_name}
+          <div className="flex min-w-0 text-xs text-muted">
+            <span className="truncate">{m.player_name}</span>
+            {/* The notes stay whole; only the manager's name truncates. */}
+            {joinedGw !== null && (
+              <span className="shrink-0 whitespace-pre">
+                {' · '}
+                <JoinedNote event={joinedGw} />
+              </span>
+            )}
             {move && (
-              <>
+              <span className="shrink-0 whitespace-pre">
                 {' · '}
                 <span className={`font-semibold ${move.tone}`} aria-label={move.aria}>
                   {move.label}
                 </span>
-              </>
+              </span>
             )}
           </div>
         </div>

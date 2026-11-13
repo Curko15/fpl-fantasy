@@ -19,6 +19,8 @@ import { ManagerSkeleton } from '../components/Skeleton'
 import { PlayerPhoto } from '../components/PlayerPhoto'
 import { Badge, TransferCard } from '../components/TransferCard'
 import { YouTag } from '../components/YouTag'
+import { JoinedNote } from '../components/JoinedNote'
+import { joinedEvent } from '../joined'
 import { ordinal } from '../seasonCharts'
 import { groupTransfers } from '../transfers'
 import { useLeague, useMe } from './leagueContext'
@@ -89,6 +91,7 @@ function ManagerHero({ manager, league }: { manager: Manager; league: LeagueOver
   const leaderTotal = Math.max(...league.managers.map((m) => m.total))
   const behind = leaderTotal - manager.total
   const move = manager.last_rank === 0 ? 0 : manager.last_rank - manager.rank
+  const joined = joinedEvent(manager, league.events)
   const stats = [
     { label: 'Total', value: manager.total, tone: '' },
     { label: league.current_event ? `GW${league.current_event}` : 'This GW', value: manager.event_total, tone: '' },
@@ -116,7 +119,15 @@ function ManagerHero({ manager, league }: { manager: Manager; league: LeagueOver
           {ordinal(manager.rank)}
         </div>
         <div className="min-w-0 pb-0.5">
-          <div className="text-sm text-muted">of {league.managers.length}</div>
+          <div className="text-sm text-muted">
+            of {league.managers.length}
+            {joined !== null && (
+              <>
+                {' · '}
+                <JoinedNote event={joined} />
+              </>
+            )}
+          </div>
           <div className="truncate font-semibold">{manager.player_name}</div>
         </div>
         {move !== 0 && (

@@ -1,7 +1,9 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Pause, Play } from 'lucide-react'
 import type { Manager } from '../api'
+import { lateJoiners } from '../joined'
 import { RACE_TOP, raceFrame, racePool } from '../seasonCharts'
+import { JoinedNote } from './JoinedNote'
 
 const ROW = 36 // px per bar row
 const STEP_MS = 900
@@ -15,6 +17,7 @@ export default function TitleRace({ managers, events, meId }: { managers: Manage
 
   const byId = useMemo(() => new Map(managers.map((m) => [m.entry_id, m])), [managers])
   const pool = useMemo(() => racePool(managers, meId), [managers, meId])
+  const late = useMemo(() => lateJoiners(managers, events), [managers, events])
   const shown = events.includes(event) ? event : last
   const bars = useMemo(() => raceFrame(managers, pool, shown, meId), [managers, pool, shown, meId])
 
@@ -78,13 +81,17 @@ export default function TitleRace({ managers, events, meId }: { managers: Manage
               <span className="w-6 shrink-0 text-right font-display text-sm font-bold text-muted tabular-nums">
                 {Number.isFinite(b.rank) ? b.rank : ''}
               </span>
-              <div className="relative h-7 min-w-0 flex-1">
+              <div className="flex h-7 min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
                 <div
-                  className={`flex h-full items-center overflow-hidden rounded-lg px-2 transition-[width] duration-600 ease-out motion-reduce:transition-none ${tone}`}
+                  className={`flex h-full shrink-0 items-center overflow-hidden rounded-lg px-2 transition-[width] duration-600 ease-out motion-reduce:transition-none ${tone}`}
                   style={{ width: `${b.width}%` }}
                 >
                   <span className={`truncate text-xs ${isMe ? 'font-bold' : 'font-semibold'}`}>{m.team_name}</span>
                 </div>
+                {/* Late joiners' totals cover fewer weeks: say so in the space past the bar. */}
+                {late.has(b.entryId) && (
+                  <JoinedNote event={late.get(b.entryId)!} className="min-w-0 truncate text-[11px]" />
+                )}
               </div>
               <span className="w-10 shrink-0 text-right font-display text-sm font-bold tabular-nums">{b.total}</span>
             </li>

@@ -30,10 +30,10 @@ export function focusTeams(managers: Manager[], meId: number): number[] {
   const leader = table[0].entry_id
   const above = table.slice(0, me).filter((m) => m.entry_id !== leader)
   const below = table.slice(me + 1)
-  let up = Math.min(NEIGHBOURS, above.length)
-  let down = Math.min(NEIGHBOURS, below.length)
-  up = Math.min(above.length, up + (NEIGHBOURS - down))
-  down = Math.min(below.length, down + (NEIGHBOURS - up))
+  const nearUp = Math.min(NEIGHBOURS, above.length)
+  const nearDown = Math.min(NEIGHBOURS, below.length)
+  const up = Math.min(above.length, nearUp + (NEIGHBOURS - nearDown))
+  const down = Math.min(below.length, nearDown + (NEIGHBOURS - nearUp))
 
   const ids = new Set<number>([leader, ...above.slice(above.length - up).map((m) => m.entry_id), ...below.slice(0, down).map((m) => m.entry_id)])
   ids.delete(meId)

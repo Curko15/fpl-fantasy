@@ -39,6 +39,10 @@ describe('focusTeams', () => {
     expect(focusTeams(table(50), 23)).toEqual([1, 21, 22, 24, 25])
   })
 
+  it('keeps the one manager below when second to last', () => {
+    expect(focusTeams(table(11), 10)).toEqual([1, 7, 8, 9, 11])
+  })
+
   it('fills from the other side near the top and bottom', () => {
     expect(focusTeams(table(50), 1)).toEqual([2, 3, 4, 5])
     expect(focusTeams(table(50), 2)).toEqual([1, 3, 4, 5, 6])

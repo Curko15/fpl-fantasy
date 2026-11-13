@@ -1,28 +1,19 @@
-import { useId, useMemo, useState } from 'react'
+import { lazy, useId, useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  type TooltipContentProps,
-} from 'recharts'
+import type { TooltipContentProps } from 'recharts'
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import type { Manager } from '../api'
 import { useChartColors } from '../chartColors'
+import { ChartSlot } from './ChartSlot'
+import { lateJoiners, lateJoinersNote } from '../joined'
+import { JoinedNote } from './JoinedNote'
 import { Segmented } from './Segmented'
+import { YouTag } from './YouTag'
 import { focusTeams, seasonRows, type FocusMode } from '../seasonCharts'
 
-/** Evenly spaced rank ticks that always include first and last place. */
-function positionTicks(count: number): number[] {
-  const step = Math.max(1, Math.ceil((count - 1) / 5))
-  const ticks: number[] = []
-  for (let t = 1; t < count; t += step) ticks.push(t)
-  return [...ticks, count]
-}
+// Recharts only loads when the chart is about to be seen (see ChartSlot).
+const loadLines = () => import('./FocusLines')
+const FocusLines = lazy(loadLines)
 
 const MAX_MATCHES = 5
 
@@ -51,6 +42,8 @@ export default function FocusChart({
   const leader = table[0]?.entry_id
   const auto = useMemo(() => (me === undefined ? [] : focusTeams(managers, me)), [managers, me])
   const rows = useMemo(() => seasonRows(managers, events, mode), [managers, events, mode])
+  const late = useMemo(() => lateJoiners(managers, events), [managers, events])
+  const lateNote = useMemo(() => lateJoinersNote(managers, events), [managers, events])
 
   // Color follows the manager: me = accent, leader = ink, rivals in fixed order, then extras.
   const color = new Map<number, string>()
@@ -67,7 +60,9 @@ export default function FocusChart({
 
   const latest = rows[rows.length - 1]
   // Scale "behind" to the highlighted lines; faint far-behind lines run off the bottom.
-  const behindMax = Math.max(10, ...rows.flatMap((r) => highlighted.map((m) => r[m.entry_id] ?? 0)))
+  // Late joiners (other than me) don't stretch it either: their gap is mostly missed weeks.
+  const scaled = highlighted.filter((m) => m.entry_id === me || !late.has(m.entry_id))
+  const behindMax = Math.max(10, ...rows.flatMap((r) => scaled.map((m) => r[m.entry_id] ?? 0)))
   const behindTop = Math.ceil((behindMax * 1.1) / 10) * 10
   const q = query.trim().toLowerCase()
   const matches = q
@@ -104,6 +99,7 @@ export default function FocusChart({
             <span className={`min-w-0 flex-1 truncate ${id === me ? 'font-semibold' : 'text-ink-2'}`}>
               {byId.get(id)?.team_name}
             </span>
+            {late.has(id) && <JoinedNote event={late.get(id)!} className="shrink-0 text-[11px]" />}
             <span className="font-semibold tabular-nums">
               {mode === 'position' ? `#${v}` : v === 0 ? 'Leader' : `−${v}`}
             </span>
@@ -131,58 +127,21 @@ export default function FocusChart({
       />
 
       <div className="mt-3 rounded-2xl border border-line bg-card px-1 pt-3 pb-1">
-        <div className="h-64 sm:h-80" role="img" aria-label={chartLabel}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={rows} margin={{ top: 6, right: 12, bottom: 0, left: 0 }}>
-              <CartesianGrid stroke={colors.grid} vertical={false} />
-              <XAxis
-                dataKey="event"
-                tick={{ fontSize: 11, fill: colors.axis }}
-                tickLine={false}
-                axisLine={{ stroke: colors.grid }}
-                interval="preserveStartEnd"
-                minTickGap={16}
-                tickFormatter={(e) => `GW${e}`}
-              />
-              <YAxis
-                reversed
-                domain={mode === 'position' ? [1, managers.length] : [0, behindTop]}
-                allowDataOverflow
-                allowDecimals={false}
-                ticks={mode === 'position' ? positionTicks(managers.length) : undefined}
-                tick={{ fontSize: 11, fill: colors.axis }}
-                tickLine={false}
-                axisLine={false}
-                width={mode === 'position' ? 28 : 38}
-              />
-              <Tooltip content={TooltipContent} cursor={{ stroke: colors.axis, strokeDasharray: '3 3' }} />
-              {faint.map((m) => (
-                <Line
-                  key={m.entry_id}
-                  dataKey={String(m.entry_id)}
-                  stroke={colors.faint}
-                  strokeWidth={1}
-                  dot={false}
-                  activeDot={false}
-                  isAnimationActive={false}
-                />
-              ))}
-              {strong.map((m) => (
-                <Line
-                  key={m.entry_id}
-                  dataKey={String(m.entry_id)}
-                  type="monotone"
-                  stroke={color.get(m.entry_id)}
-                  strokeWidth={m.entry_id === me ? 3.5 : 2}
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: colors.card }}
-                  isAnimationActive={false}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <ChartSlot className="h-64 sm:h-80" label={chartLabel} preload={loadLines}>
+          <FocusLines
+            rows={rows}
+            mode={mode}
+            managerCount={managers.length}
+            behindTop={behindTop}
+            faint={faint.map((m) => m.entry_id)}
+            strong={strong.map((m) => m.entry_id)}
+            color={color}
+            me={me}
+            tooltip={TooltipContent}
+          />
+        </ChartSlot>
       </div>
+      {lateNote && <p className="mt-2 px-1 text-xs text-muted">{lateNote}</p>}
 
       <div className="mt-4 flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold">{meId === null ? 'Leader and chasers' : 'Your team and rivals'}</h3>
@@ -196,7 +155,8 @@ export default function FocusChart({
               <span className="h-1 w-3 shrink-0 rounded-full" style={{ background: color.get(m.entry_id) }} />
               <span className="w-8 shrink-0 text-xs text-muted tabular-nums">#{m.rank}</span>
               <span className={`min-w-0 flex-1 truncate text-sm ${isMe ? 'font-bold' : 'font-medium'}`}>{m.team_name}</span>
-              {isMe && <span className="shrink-0 rounded-full bg-accent/12 px-2 py-0.5 text-[11px] font-bold text-accent">You</span>}
+              {isMe && <YouTag />}
+              {late.has(m.entry_id) && <JoinedNote event={late.get(m.entry_id)!} className="shrink-0 text-[11px]" />}
               <span className={`shrink-0 font-display text-sm font-bold tabular-nums ${removable ? '' : 'pr-2.5'}`}>
                 {value(m.entry_id)}
               </span>

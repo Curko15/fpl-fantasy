@@ -15,8 +15,9 @@ Read this first in a new session, together with `docs/PLAN.md`.
 | #17 | `matchday-recap` | **open, stacked on #16** | Matchday recap as the first view of the Awards tab |
 | #18 | `head-to-head` | **open, stacked on #17** | Head-to-head page comparing two managers |
 | #19 | `live-gameweek` | **open, stacked on #18** | Live gameweek view: live scores and table while a GW is being played |
+| #20 | `polish-pass` | **open, stacked on #19** | Polish: lazy-loaded chart code, "Joined GWn" marks for mid-season joiners |
 
-Merge #12, then #13, #14, #15, #16, #17, #18 and #19, in that order. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
+Merge #12, then #13, #14, #15, #16, #17, #18, #19 and #20, in that order. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
 
 ## Design decisions (all chosen by the user from canvas prototypes)
 
@@ -60,10 +61,17 @@ Prototype canvas (private to the user): https://claude.ai/artifact/7yzcePz8fTcqb
 - UI: `/league/:id/live` (`pages/LivePage.tsx`), a detail page with a back header. Reached from the "Live scores and table" button in the Overview gameweek card, shown only while the GW is in progress. Hero = my team (or the leader): live score, live rank + movement, gap to the team above; then the live table (rank, movement since the deadline, captain, chip/hit, GW points + players left, total), my row highlighted. Refetches every 60 s only while live (react-query pauses it in a hidden tab). Helpers in `src/live.ts` (tested).
 - Testing while nothing is live: `?event=N` (endpoint and page, e.g. `/league/1700002/live?event=10`) shows the same view for an earlier GW of the league from stored points, marked "Finished", without auto refresh. Only GWs from the league start to the current one are accepted.
 
+## Polish (done in #20)
+
+- **Lazy chart code**: only the Recharts canvas is lazy, so the list, search and legends around it render at once. `FocusLines` (Focus chart) and `GapArea` (head-to-head gap chart) are their own modules, mounted through `components/ChartSlot.tsx`: a fixed-height box that mounts the chart once it's within 600px of the viewport (IntersectionObserver; mounts at once without it), prefetches the code 1.5 s after paint, and shows a pulsing `Bone` of the same size meanwhile. Recharts stays in Vite's shared `CartesianChart` chunk (no `manualChunks` needed: it was already split out and cached separately).
+- Bundle (`npm run build`), what a route needs before it can render: Overview 37.7 KB + 362.3 KB Recharts (118 KB gzip) → 25.0 KB (7.7 KB gzip), Recharts after paint; Head-to-head 38.3 KB + Recharts → 17.9 KB (5.6 KB gzip). Shared `index` (React, router, query) unchanged at 316 KB / 100 KB gzip.
+- **Mid-season joiners**: `src/joined.ts` (tested): `joinedEvent(manager, events)` is the first played GW when it's after the league's first played GW (`events[0]`), else null; `lateJoiners` maps them; `lateJoinersNote` writes the chart footnote. Shown as a muted "Joined GWn" (`components/JoinedNote.tsx`) in: table rows (the name truncates, the note doesn't), Focus list + tooltip + footnote under the chart, Race (next to the bar), manager hero ("of 11 · Joined GW9"), head-to-head hero (and its record note, now measured from the league start rather than GW1), "Above median … since GWn" in Your weeks vs the league.
+- Late joiners other than me don't stretch the Focus "Behind leader" scale; their line runs off the bottom like the faint lines.
+- Fix: `focusTeams` dropped the manager below "me" when "me" was second to last.
+
 ## Backlog
 
-1. **Polish**: lazy-load the chart code (Overview chunk is ~400 KB, mostly Recharts); mark managers who joined mid-season in charts and the race.
-2. **Deployment** (postponed by the user, 2026-11-13). Agreed plan, all free tiers:
+1. **Deployment** (postponed by the user, 2026-11-13). Agreed plan, all free tiers:
    - Vercel Hobby (frontend), Render free web service (backend), Neon free Postgres (`FPL_DATABASE_URL`).
    - Render free sleeps after ~15 min idle: 30–60 s cold start, and the in-process 06:00 refresh won't fire while asleep. Fix with a free scheduled ping (GitHub Actions cron or cron-job.org). Always-on Render is ~$7/month if needed.
    - User: create the three accounts with GitHub, copy the Neon connection string, connect the repo.
