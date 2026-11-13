@@ -36,6 +36,9 @@ export default function LeagueLayout() {
   const valid = Number.isSafeInteger(leagueId) && leagueId > 0
   const { pathname } = useLocation()
   const managerMatch = useMatch('/league/:leagueId/manager/:entryId')
+  const compareMatch = useMatch('/league/:leagueId/compare')
+  // Detail pages get a back button instead of the league title, and no team bar.
+  const detail = managerMatch !== null || compareMatch !== null
 
   const query = useQuery({
     queryKey: ['league', leagueId],
@@ -89,9 +92,9 @@ export default function LeagueLayout() {
 
   return (
     <>
-      {managerMatch ? (
+      {detail ? (
         <AppHeader
-          title={manager?.team_name ?? 'Manager'}
+          title={compareMatch ? 'Head-to-head' : (manager?.team_name ?? 'Manager')}
           subtitle={data.league.name}
           back={{ to: `/league/${data.league.id}`, label: `Back to ${data.league.name}` }}
         />
@@ -136,7 +139,7 @@ export default function LeagueLayout() {
 
       <main className={shell}>
         <Suspense fallback={<PageSkeleton />}>
-          {!managerMatch && <MyTeamBar league={data} />}
+          {!detail && <MyTeamBar league={data} />}
           <Outlet context={{ league: data } satisfies LeagueContext} />
         </Suspense>
       </main>

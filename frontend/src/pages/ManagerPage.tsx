@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Swords } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useLeagueTransfers } from '../queries'
 import {
@@ -79,6 +80,12 @@ export default function ManagerPage() {
 function ManagerHero({ manager, league }: { manager: Manager; league: LeagueOverview }) {
   const [meId, setMe] = useMe()
   const isMe = manager.entry_id === meId
+  const table = [...league.managers].sort((a, b) => a.rank - b.rank)
+  // Compare with my team; when this is my team (or none is saved), with the leader, or 2nd if this is the leader.
+  const rival =
+    !isMe && meId !== null
+      ? league.managers.find((m) => m.entry_id === meId)
+      : table.find((m) => m.entry_id !== manager.entry_id)
   const leaderTotal = Math.max(...league.managers.map((m) => m.total))
   const behind = leaderTotal - manager.total
   const move = manager.last_rank === 0 ? 0 : manager.last_rank - manager.rank
@@ -131,6 +138,17 @@ function ManagerHero({ manager, league }: { manager: Manager; league: LeagueOver
           </div>
         ))}
       </dl>
+      {rival && (
+        <Link
+          to={`/league/${league.league.id}/compare?a=${isMe || meId === null ? manager.entry_id : meId}&b=${
+            isMe || meId === null ? rival.entry_id : manager.entry_id
+          }`}
+          className="mt-3 flex h-11 items-center justify-center gap-2 rounded-xl border border-line text-sm font-semibold active:bg-raised"
+        >
+          <Swords size={16} aria-hidden className="text-accent" />
+          <span className="min-w-0 truncate">Compare with {rival.team_name}</span>
+        </Link>
+      )}
     </section>
   )
 }

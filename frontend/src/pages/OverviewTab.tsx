@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronRight, Swords } from 'lucide-react'
 import type { Award, AwardWinner, LeagueOverview, Manager } from '../api'
 import { AWARDS, awardHeadline, awardStory } from '../awards'
 import { chipLabel } from '../chips'
@@ -30,6 +31,16 @@ export default function OverviewTab() {
           Table
         </SectionHeading>
         <StandingsTable managers={league.managers} events={league.events} />
+        {league.managers.length > 1 && (
+          <Link
+            to="compare"
+            className="mt-2.5 flex h-12 items-center gap-3 rounded-2xl border border-line bg-card px-3.5 text-sm font-semibold active:bg-raised"
+          >
+            <Swords size={18} aria-hidden className="shrink-0 text-accent" />
+            <span className="min-w-0 flex-1 truncate">Head-to-head: compare two teams</span>
+            <ChevronRight size={18} aria-hidden className="shrink-0 text-muted" />
+          </Link>
+        )}
       </section>
 
       <TransferPulseSection leagueId={league.league.id} managers={managers} />

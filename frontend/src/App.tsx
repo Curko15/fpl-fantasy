@@ -10,6 +10,7 @@ const TransfersTab = lazy(() => import('./pages/TransfersTab'))
 const ChipsTab = lazy(() => import('./pages/ChipsTab'))
 const AwardsTab = lazy(() => import('./pages/AwardsTab'))
 const ManagerPage = lazy(() => import('./pages/ManagerPage'))
+const ComparePage = lazy(() => import('./pages/ComparePage'))
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="chips" element={<ChipsTab />} />
             <Route path="awards" element={<AwardsTab />} />
             <Route path="manager/:entryId" element={<ManagerPage />} />
+            <Route path="compare" element={<ComparePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
