@@ -1,8 +1,10 @@
+import { Armchair, ArrowDown, CircleX, Clover, Coins, Crown, LifeBuoy, Undo2, ZapOff, type LucideIcon } from 'lucide-react'
 import type { Award, AwardKey, AwardWinner } from './api'
 import { chipLabel } from './chips'
 
 interface AwardMeta {
   emoji: string
+  icon: LucideIcon
   title: string
   fame: boolean
   /** One line telling the story of this win. */
@@ -14,48 +16,56 @@ const pts = (n: number | null) => `${n ?? 0} pt${n === 1 ? '' : 's'}`
 
 export const AWARDS: Record<AwardKey, AwardMeta> = {
   manager_of_week: {
+    icon: Crown,
     emoji: '👑',
     title: 'Manager of the Week',
     fame: true,
     describe: (w) => `Top score: ${pts(w.value)}`,
   },
   loser_of_week: {
+    icon: ArrowDown,
     emoji: '🥄',
     title: 'Loser of the Week',
     fame: false,
     describe: (w) => `Bottom score: ${pts(w.value)}`,
   },
   bench_loser: {
+    icon: Armchair,
     emoji: '🪑',
     title: 'Bench Loser',
     fame: false,
     describe: (w) => `${name(w.player)} scored ${pts(w.value)} on the bench (${pts(w.secondary)} benched in total)`,
   },
   lucky_sub: {
+    icon: Clover,
     emoji: '🍀',
     title: 'Lucky Sub',
     fame: true,
     describe: (w) => `${name(w.player)} came on for ${name(w.other_player)} and scored ${pts(w.value)}`,
   },
   vice_saviour: {
+    icon: LifeBuoy,
     emoji: '🛟',
     title: 'Vice-Captain Saviour',
     fame: true,
     describe: (w) => `${name(w.other_player)} didn't play; vice ${name(w.player)} doubled to ${pts(w.value)}`,
   },
   captain_fail: {
+    icon: CircleX,
     emoji: '🤡',
     title: 'Captain Fail',
     fame: false,
     describe: (w) => `Captained ${name(w.player)}: ${pts(w.value)}`,
   },
   hit_regret: {
+    icon: Coins,
     emoji: '💸',
     title: 'Hit Regret',
     fame: false,
     describe: (w) => `Took a −${w.value} hit; the new signings scored ${pts(w.secondary)}`,
   },
   sold_too_soon: {
+    icon: Undo2,
     emoji: '🔙',
     title: 'Sold Too Soon',
     fame: false,
@@ -63,6 +73,7 @@ export const AWARDS: Record<AwardKey, AwardMeta> = {
       `Sold ${name(w.player)} (${pts(w.value)}) for ${name(w.other_player)} (${pts(w.secondary)})`,
   },
   chip_flop: {
+    icon: ZapOff,
     emoji: '🎯',
     title: 'Chip Flop',
     fame: false,
@@ -85,4 +96,15 @@ export function awardNote(award: Award): string | null {
 export function awardHeadline(key: AwardKey, w: AwardWinner): string {
   if (key === 'hit_regret') return `−${w.value}`
   return pts(w.value)
+}
+
+// Where a card already shows the score as its headline, say something else.
+const STORY_OVERRIDE: Partial<Record<AwardKey, string>> = {
+  manager_of_week: 'Highest score in the league',
+  loser_of_week: 'Lowest score in the league',
+}
+
+/** The line under a card's headline number. */
+export function awardStory(key: AwardKey, w: AwardWinner): string {
+  return STORY_OVERRIDE[key] ?? AWARDS[key].describe(w)
 }

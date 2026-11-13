@@ -34,6 +34,8 @@ const transfer = (event: number, inId: number, outId: number): Transfer => ({
   player_out: player(outId),
   out_cost: 50,
   kind: 'free',
+  in_points: null,
+  out_points: null,
 })
 
 describe('gameweekSummary', () => {

@@ -33,6 +33,10 @@ class Transfer(BaseModel):
     player_out: Player
     out_cost: int
     kind: TransferKind
+    # Points each player scored in this gameweek; None until that gameweek's
+    # live points are stored (the background backfill fetches them).
+    in_points: int | None = None
+    out_points: int | None = None
 
 
 class ManagerTransferSummary(BaseModel):
@@ -85,9 +89,13 @@ def tag_gameweek(
 
 
 def build_league_transfers(
-    overview: LeagueOverview, transfers: dict[int, list[Any]], bootstrap: dict[str, Any]
+    overview: LeagueOverview,
+    transfers: dict[int, list[Any]],
+    bootstrap: dict[str, Any],
+    live: dict[int, dict[int, int]] | None = None,
 ) -> LeagueTransfers:
     players = players_by_id(bootstrap)
+    live = live or {}
 
     feed: list[Transfer] = []
     summaries: list[ManagerTransferSummary] = []
@@ -105,6 +113,7 @@ def build_league_transfers(
             gw = gws.get(event)
             chip = gw.chip if gw else None
             cost = gw.transfers_cost if gw else 0
+            points = live.get(event)
             for t, kind in tag_gameweek(gw_transfers, chip, cost):
                 hits += kind == "hit"
                 feed.append(
@@ -118,6 +127,8 @@ def build_league_transfers(
                         or unknown_player(t["element_out"]),
                         out_cost=t["element_out_cost"],
                         kind=kind,
+                        in_points=points.get(t["element_in"], 0) if points else None,
+                        out_points=points.get(t["element_out"], 0) if points else None,
                     )
                 )
 

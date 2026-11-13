@@ -1,194 +1,243 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Clock } from 'lucide-react'
 import type { Manager } from '../api'
-import { chipColumns, chipLabel, managerChipSlots, type ChipColumn, type ChipSlot } from '../chips'
+import { chipColor, chipHalfCards, chipHalves, chipLabel, type ChipHalf, type ChipHalfCard } from '../chips'
+import { Segmented } from '../components/Segmented'
 import { useLeague } from './leagueContext'
 
-interface Play {
-  manager: Manager
-  event: number
-  points: number
-}
+const HOLDER_FACES = 5
+
+const initial = (m: Manager) => [...m.team_name][0]?.toUpperCase() ?? '?'
 
 export default function ChipsTab() {
   const { league } = useLeague()
-  const columns = useMemo(() => chipColumns(league.chips), [league.chips])
+  const [params, setParams] = useSearchParams()
+  const halves = useMemo(() => chipHalves(league.chips), [league.chips])
   const nextEvent = (league.current_event ?? 0) + 1
 
-  const rows = useMemo(
-    () => league.managers.map((m) => ({ manager: m, slots: managerChipSlots(m, columns, nextEvent) })),
-    [league.managers, columns, nextEvent],
+  // Default to the window chips can be played in now (or the last one, once the season ends).
+  const current = Math.max(0, halves.findIndex((h) => nextEvent <= h.stop))
+  const requested = Number(params.get('half'))
+  const index = halves[requested] ? requested : current
+  const half = halves[index]
+
+  const cards = useMemo(
+    () => (half ? chipHalfCards(league.managers, league.chips, half, nextEvent) : []),
+    [league.managers, league.chips, half, nextEvent],
   )
 
-  if (columns.length === 0) {
-    return <p className="text-sm text-ink-2">FPL hasn't published any chips for this season yet.</p>
+  if (!half) {
+    return <p className="rounded-2xl border border-line bg-card p-4 text-sm text-ink-2">FPL hasn't published any chips for this season yet.</p>
   }
 
   return (
-    <>
-      <section aria-labelledby="chips-heading">
-        <h2 id="chips-heading" className="text-lg font-semibold">
-          Chips played
-        </h2>
-        <Legend />
-
-        {/* Scrolls sideways only if FPL ever adds more chips than fit a phone. */}
-        <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-card">
-          <table className="w-full min-w-[20rem] table-fixed text-sm">
-            <thead>
-              <tr className="border-b border-line text-xs text-muted">
-                <th scope="col" className="sticky left-0 bg-card py-2 pl-3 text-left font-medium">
-                  Manager
-                </th>
-                {columns.map((c) => (
-                  <th key={c.name} scope="col" className="w-12 py-2 text-center font-medium">
-                    <abbr title={chipLabel(c.name).label} className="no-underline">
-                      {chipLabel(c.name).short}
-                    </abbr>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {rows.map(({ manager, slots }) => (
-                <tr key={manager.entry_id}>
-                  <th scope="row" className="sticky left-0 min-w-0 bg-card py-2 pl-3 pr-1 text-left font-normal">
-                    <Link to={`../manager/${manager.entry_id}`} className="block">
-                      <div className="truncate font-medium">{manager.team_name}</div>
-                      <div className="truncate text-xs text-muted">{manager.player_name}</div>
-                    </Link>
-                  </th>
-                  {columns.map((c) => (
-                    <td key={c.name} className="py-1.5 text-center align-middle last:pr-1">
-                      <div className="flex flex-col items-center gap-1">
-                        {slots.get(c.name)!.map((slot, i) => (
-                          <SlotMark key={i} slot={slot} chip={chipLabel(c.name).label} />
-                        ))}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <BestAndWorst columns={columns} managers={league.managers} />
-    </>
-  )
-}
-
-function Legend() {
-  return (
-    <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-2">
-      <li className="flex items-center gap-1.5">
-        <span className="rounded bg-accent/15 px-1 font-semibold text-accent">GW5</span> played, with points
-      </li>
-      <li className="flex items-center gap-1.5">
-        <span className="size-3 rounded-full border-2 border-up" /> available
-      </li>
-      <li className="flex items-center gap-1.5">
-        <span className="text-muted">–</span> not yet
-      </li>
-      <li className="flex items-center gap-1.5">
-        <span className="text-muted">✕</span> expired unused
-      </li>
-    </ul>
-  )
-}
-
-function SlotMark({ slot, chip }: { slot: ChipSlot; chip: string }) {
-  switch (slot.state) {
-    case 'used':
-      return (
-        <span
-          className="flex flex-col items-center rounded-md bg-accent/15 px-1.5 py-0.5 leading-tight"
-          aria-label={`${chip} played in gameweek ${slot.event}, ${slot.points} points`}
-        >
-          <span className="text-[11px] font-semibold text-accent">GW{slot.event}</span>
-          <span className="text-[11px] tabular-nums text-ink-2">{slot.points}</span>
-        </span>
-      )
-    case 'available':
-      return (
-        <span
-          className="my-1 size-3.5 rounded-full border-2 border-up"
-          role="img"
-          aria-label={`${chip} available until gameweek ${slot.until}`}
-          title={`Available until GW${slot.until}`}
+    <div className="space-y-4">
+      {halves.length > 1 && (
+        <Segmented
+          label="Season half"
+          value={String(index)}
+          onChange={(v) =>
+            setParams(
+              (prev) => {
+                const next = new URLSearchParams(prev)
+                next.set('half', v)
+                return next
+              },
+              { replace: true },
+            )
+          }
+          options={halves.map((h, i) => ({ value: String(i), label: `GW${h.start}–${h.stop}` }))}
         />
-      )
-    case 'later':
-      return (
-        <span className="text-muted" role="img" aria-label={`${chip} available from gameweek ${slot.from}`} title={`From GW${slot.from}`}>
-          –
-        </span>
-      )
-    case 'expired':
-      return (
-        <span className="text-muted" role="img" aria-label={`${chip} expired unused`} title="Expired unused">
-          ✕
-        </span>
-      )
-  }
+      )}
+
+      <Deadline half={half} nextEvent={nextEvent} unplayed={cards.reduce((n, c) => n + c.holders.length, 0)} />
+
+      <ul className="space-y-2.5">
+        {cards.map((card) => (
+          <ChipCard key={card.name} card={card} managers={league.managers.length} />
+        ))}
+      </ul>
+
+      <Timeline half={half} managers={league.managers} currentEvent={league.current_event} />
+    </div>
+  )
 }
 
-function BestAndWorst({ columns, managers }: { columns: ChipColumn[]; managers: Manager[] }) {
-  const cards = columns
-    .map((c) => {
-      const plays: Play[] = managers.flatMap((m) =>
-        m.history.filter((h) => h.chip === c.name).map((h) => ({ manager: m, event: h.event, points: h.points })),
-      )
-      return { column: c, plays }
-    })
-    .filter((c) => c.plays.length > 0)
-
-  if (cards.length === 0) return null
-
+function Deadline({ half, nextEvent, unplayed }: { half: ChipHalf; nextEvent: number; unplayed: number }) {
+  let title: string
+  let text: string
+  if (nextEvent < half.start) {
+    title = `Unlocks in GW${half.start}`
+    text = 'Everyone gets a fresh set of chips for the second half.'
+  } else if (nextEvent > half.stop) {
+    title = `Window closed after GW${half.stop}`
+    text = unplayed ? `${unplayed} chip${unplayed === 1 ? '' : 's'} expired unplayed.` : 'Every chip was played.'
+  } else {
+    const left = half.stop - nextEvent + 1
+    title = `${left} GW${left === 1 ? '' : 's'} left to play these chips`
+    text = `${unplayed} chip${unplayed === 1 ? '' : 's'} still unplayed. They expire after GW${half.stop}.`
+  }
+  const urgent = nextEvent >= half.start && nextEvent <= half.stop
   return (
-    <section className="mt-8" aria-labelledby="chip-plays-heading">
-      <h2 id="chip-plays-heading" className="text-lg font-semibold">
-        Best and worst plays
-      </h2>
-      <p className="mt-0.5 text-xs text-muted">Gameweek score (after hits) in the week the chip was played.</p>
-      <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-        {cards.map(({ column, plays }) => {
-          const best = Math.max(...plays.map((p) => p.points))
-          const worst = Math.min(...plays.map((p) => p.points))
-          return (
-            <li key={column.name} className="rounded-xl border border-line bg-card px-3 py-3">
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="font-semibold">{chipLabel(column.name).label}</h3>
-                <span className="text-xs text-muted">played {plays.length}×</span>
-              </div>
-              <PlayLine label="Best" plays={plays.filter((p) => p.points === best)} tone="up" />
-              {plays.length > 1 && worst !== best && (
-                <PlayLine label="Worst" plays={plays.filter((p) => p.points === worst)} tone="down" />
-              )}
-            </li>
-          )
-        })}
-      </ul>
+    <section
+      aria-label="Chip deadline"
+      className={`flex items-center gap-3 rounded-2xl border p-3.5 ${
+        urgent ? 'border-chip-bboost/40 bg-chip-bboost/10' : 'border-line bg-card'
+      }`}
+    >
+      <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${urgent ? 'bg-chip-bboost/20 text-ink' : 'bg-raised text-muted'}`}>
+        <Clock size={20} aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <div className="text-sm font-bold">{title}</div>
+        <div className="text-xs text-ink-2">{text}</div>
+      </div>
     </section>
   )
 }
 
-function PlayLine({ label, plays, tone }: { label: string; plays: Play[]; tone: 'up' | 'down' }) {
+function ChipCard({ card, managers }: { card: ChipHalfCard; managers: number }) {
+  const { label, short } = chipLabel(card.name)
+  const color = chipColor(card.name)
+  const used = card.plays.length
   return (
-    <div className="mt-2 flex items-start gap-2 text-sm">
-      <span className={`w-11 shrink-0 text-xs font-semibold uppercase ${tone === 'up' ? 'text-up' : 'text-down'}`}>
-        {label}
-      </span>
-      <div className="min-w-0 flex-1">
-        {plays.map((p) => (
-          <div key={`${p.manager.entry_id}-${p.event}`} className="flex items-baseline gap-2">
-            <span className="min-w-0 flex-1 truncate">{p.manager.team_name}</span>
-            <span className="shrink-0 text-xs text-muted">GW{p.event}</span>
-            <span className="w-8 shrink-0 text-right font-semibold tabular-nums">{p.points}</span>
+    <li className="rounded-3xl border border-line bg-card p-4">
+      <div className="flex items-center gap-3">
+        <span
+          className="grid size-11 shrink-0 place-items-center rounded-2xl font-display text-[15px] font-bold text-chip-ink"
+          style={{ background: color }}
+        >
+          {short}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-bold">{label}</h2>
+          <div className="text-xs text-muted">
+            {used} of {managers} played{card.average !== null && ` · avg ${card.average} pts`}
           </div>
-        ))}
+        </div>
+        <div
+          role="img"
+          aria-label={`${used} of ${managers} played`}
+          className="grid size-11 shrink-0 place-items-center rounded-full"
+          style={{ background: `conic-gradient(${color} ${(used / Math.max(managers, 1)) * 360}deg, var(--color-line) 0)` }}
+        >
+          <span className="grid size-[34px] place-items-center rounded-full bg-card font-display text-[13px] font-bold tabular-nums">
+            {used}
+          </span>
+        </div>
       </div>
-    </div>
+
+      {card.best && (
+        <Link
+          to={`../manager/${card.best.manager.entry_id}`}
+          className="mt-3.5 flex items-center gap-3 rounded-2xl bg-raised px-3 py-2.5"
+        >
+          <span className="text-[11px] font-bold tracking-[0.06em] text-muted uppercase">Best</span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold">{card.best.manager.team_name}</div>
+            <div className="text-xs text-muted">GW{card.best.event}</div>
+          </div>
+          <span className="font-display text-xl font-bold tabular-nums">{card.best.points}</span>
+        </Link>
+      )}
+
+      <div className="mt-3 flex items-center gap-2">
+        {card.holders.length > 0 ? (
+          <>
+            <div className="flex">
+              {card.holders.slice(0, HOLDER_FACES).map((m) => (
+                <span
+                  key={m.entry_id}
+                  title={m.team_name}
+                  className="-mr-2 grid size-[30px] place-items-center rounded-full border-2 border-card bg-raised text-[11px] font-bold"
+                >
+                  {initial(m)}
+                </span>
+              ))}
+            </div>
+            <span className="ml-2 text-xs text-ink-2">
+              {card.holders.length} still holding
+              {card.holders.length > HOLDER_FACES && ` (+${card.holders.length - HOLDER_FACES} more)`}
+            </span>
+          </>
+        ) : (
+          <span className="text-xs text-muted">Nobody left holding it</span>
+        )}
+      </div>
+    </li>
+  )
+}
+
+function Timeline({ half, managers, currentEvent }: { half: ChipHalf; managers: Manager[]; currentEvent: number | null }) {
+  const span = Math.max(half.stop - half.start, 1)
+  const pos = (e: number) => `${((e - half.start) / span) * 100}%`
+  const now = currentEvent !== null && currentEvent >= half.start && currentEvent <= half.stop ? currentEvent : null
+  const ticks = [half.start, Math.round(half.start + span / 3), Math.round(half.start + (2 * span) / 3), half.stop]
+  const plays = managers.map((m) => ({
+    manager: m,
+    plays: m.history.filter((h) => h.chip && h.event >= half.start && h.event <= half.stop),
+  }))
+  const kinds = [...new Set(plays.flatMap((p) => p.plays.map((h) => h.chip!)))]
+
+  return (
+    <section aria-labelledby="timeline-heading">
+      <h2 id="timeline-heading" className="mb-1 text-lg font-bold">
+        When chips were played
+      </h2>
+      {kinds.length > 0 && (
+        <ul className="mb-2.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-2">
+          {kinds.map((k) => (
+            <li key={k} className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full" style={{ background: chipColor(k) }} />
+              {chipLabel(k).label}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="rounded-2xl border border-line bg-card px-3.5 pt-3 pb-2.5">
+        <div className="relative px-3">
+          {now !== null && (
+            <span aria-hidden className="absolute top-0 bottom-5 w-0.5 bg-accent/50" style={{ left: `calc(${pos(now)} + 0.75rem - 1px)` }} />
+          )}
+          {plays.map(({ manager, plays: own }) => (
+            <div key={manager.entry_id} className="h-12">
+              <Link to={`../manager/${manager.entry_id}`} className="-mx-3 block truncate text-xs font-semibold">
+                {manager.team_name}
+              </Link>
+              <div className="relative mt-1 h-[22px]">
+                <span aria-hidden className="absolute inset-x-0 top-2.5 h-0.5 rounded-full bg-line" />
+                {own.map((h, i) => {
+                  // Two chips in one gameweek (e.g. WC + BB) sit side by side.
+                  const twin = own.slice(0, i).some((o) => o.event === h.event)
+                  return (
+                    <span
+                      key={`${h.chip}-${h.event}`}
+                      title={`${chipLabel(h.chip!).label}, GW${h.event}: ${h.points} pts`}
+                      className="absolute top-0 grid h-[22px] min-w-[26px] -translate-x-1/2 place-items-center rounded-full px-1 text-[10px] font-extrabold text-chip-ink"
+                      style={{ left: twin ? `calc(${pos(h.event)} + 28px)` : pos(h.event), background: chipColor(h.chip!) }}
+                    >
+                      {chipLabel(h.chip!).short}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+          <div className="relative mt-1 h-4 text-[10px] text-muted">
+            {ticks.filter((t) => now === null || Math.abs(t - now) > 1).map((t) => (
+              <span key={t} className="absolute -translate-x-1/2" style={{ left: pos(t) }}>
+                {t === half.start ? `GW${t}` : t}
+              </span>
+            ))}
+            {now !== null && (
+              <span className="absolute -translate-x-1/2 font-bold text-accent" style={{ left: pos(now) }}>
+                now
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }

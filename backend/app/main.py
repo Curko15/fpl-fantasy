@@ -93,7 +93,7 @@ async def get_league_transfers(request: Request, league_id: int = LeagueId) -> L
     data = await store.league(league_id)
     bootstrap = await store.bootstrap()
     overview = build_league_overview(data.standings, data.histories, bootstrap, data.fetched_at)
-    return build_league_transfers(overview, data.transfers, bootstrap)
+    return build_league_transfers(overview, data.transfers, bootstrap, await store.stored_live())
 
 
 @app.get("/api/leagues/{league_id}/managers/{entry_id}", response_model=ManagerDetail)
