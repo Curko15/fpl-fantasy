@@ -43,22 +43,3 @@ export function useMyTeam(leagueId: number, entryIds: number[]): [number | null,
   const set = useCallback((id: number | null) => setMyTeam(leagueId, id), [leagueId])
   return [saved !== null && entryIds.includes(saved) ? saved : null, set]
 }
-
-const skipKey = (leagueId: number) => `myTeamSkip:${leagueId}`
-
-/** True when the person said "Not now" to picking a team in this league. */
-export function getTeamPromptSkipped(leagueId: number): boolean {
-  try {
-    return localStorage.getItem(skipKey(leagueId)) === '1'
-  } catch {
-    return false
-  }
-}
-
-export function skipTeamPrompt(leagueId: number): void {
-  try {
-    localStorage.setItem(skipKey(leagueId), '1')
-  } catch {
-    // ignore: the bar just comes back next visit
-  }
-}

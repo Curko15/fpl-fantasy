@@ -34,12 +34,10 @@ export default function FocusChart({
   managers,
   events,
   meId,
-  onChangeTeam,
 }: {
   managers: Manager[]
   events: number[]
   meId: number | null
-  onChangeTeam: () => void
 }) {
   const colors = useChartColors()
   const searchId = useId()
@@ -188,9 +186,6 @@ export default function FocusChart({
 
       <div className="mt-4 flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold">{meId === null ? 'Leader and chasers' : 'Your team and rivals'}</h3>
-        <button type="button" onClick={onChangeTeam} className="-my-2 h-11 px-1 text-sm font-semibold text-accent">
-          {meId === null ? 'Pick your team' : 'Change team'}
-        </button>
       </div>
       <ol className="mt-2 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
         {highlighted.map((m) => {

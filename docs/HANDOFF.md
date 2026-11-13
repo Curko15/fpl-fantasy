@@ -11,7 +11,7 @@ Read this first in a new session, together with `docs/PLAN.md`.
 | #13 | `tabs-redesign` | **open, stacked on #12** | Transfers (Feed / Market), Chips (cards + timeline), Awards (Gameweek / Season) |
 | #14 | `season-charts` | **open, stacked on #13** | Season charts for big leagues: Focus + Race switch, "Your weeks vs the league", "my team" choice |
 | #15 | `my-team-everywhere` | **open, stacked on #14** | "You" highlights on every tab, manager page restyle with "This is my team" and weeks-vs-league |
-| #16 | `team-bar` | **open, stacked on #15** | "Which team is yours?" bar at the top of every league tab until picked or skipped |
+| #16 | `team-bar` | **open, stacked on #15** | Always-on "Your team" switcher bar at the top of every league tab |
 
 Merge #12, then #13, #14, #15 and #16, in that order. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
 
@@ -27,7 +27,7 @@ Prototype canvas (private to the user): https://claude.ai/artifact/7yzcePz8fTcqb
 
 ## Season charts (done in #14)
 
-- "My team" is saved per league in `localStorage` (`myTeam:<leagueId>`, `src/myTeam.ts`, hook `useMyTeam`). Until it's set, a "Which team is yours?" bar sits at the top of every league tab (`TeamBar` in `LeagueLayout`); "Not now" hides it for that league (`myTeamSkip:<leagueId>`). Focus centres on the leader meanwhile, with a "Pick your team" link.
+- "My team" is saved per league in `localStorage` (`myTeam:<leagueId>`, `src/myTeam.ts`, hook `useMyTeam`). It is chosen or switched in the always-on "Your team" bar at the top of every league tab (`components/TeamBar.tsx`, mounted in `LeagueLayout`; prompt style until set, "No team" clears it), or with "This is my team" on a manager page. Until it's set, Focus centres on the leader.
 - Maths in `src/seasonCharts.ts` (tested): `focusTeams`, `seasonRows`, `scoreSpread` / `spreadStats`, `racePool` / `raceFrame`.
 - Components: `FocusChart` (S1), `TitleRace` (S5), `ScoreSpread` (S4), `MyTeamPicker`. Chart hex colours live in `src/chartColors.ts` (keep in step with `index.css`).
 - Highlight colours: me = accent, leader = ink, up to 5 rivals from a validated subset of the categorical palette, so at most 5 rivals + compares. Leagues of ≤ 7 highlight everyone.

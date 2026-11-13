@@ -4,7 +4,6 @@ import type { Award, AwardWinner, LeagueOverview, Manager } from '../api'
 import { AWARDS, awardHeadline, awardStory } from '../awards'
 import { chipLabel } from '../chips'
 import FocusChart from '../components/FocusChart'
-import { MyTeamPicker } from '../components/MyTeamPicker'
 import { PlayerPhoto } from '../components/PlayerPhoto'
 import ScoreSpread from '../components/ScoreSpread'
 import { SectionHeading } from '../components/SectionHeading'
@@ -42,22 +41,9 @@ export default function OverviewTab() {
 }
 
 function SeasonCharts({ league }: { league: LeagueOverview }) {
-  const [myTeam, setMyTeam] = useMe()
+  const [myTeam] = useMe()
   const [view, setView] = useState<'focus' | 'race'>('focus')
-  const [picking, setPicking] = useState(false)
   if (league.events.length === 0) return null
-
-  const picker = picking && (
-    <MyTeamPicker
-      managers={league.managers}
-      value={myTeam}
-      onPick={(id) => {
-        setMyTeam(id)
-        setPicking(false)
-      }}
-      onCancel={() => setPicking(false)}
-    />
-  )
 
   return (
     <>
@@ -65,7 +51,6 @@ function SeasonCharts({ league }: { league: LeagueOverview }) {
         <SectionHeading id="chart-heading" aside={<span className="text-xs text-muted">{league.managers.length} managers</span>}>
           Season so far
         </SectionHeading>
-        {picker && <div className="mb-3">{picker}</div>}
         <Segmented
           label="Season view"
           value={view}
@@ -82,7 +67,6 @@ function SeasonCharts({ league }: { league: LeagueOverview }) {
             managers={league.managers}
             events={league.events}
             meId={myTeam}
-            onChangeTeam={() => setPicking(true)}
           />
         ) : (
           <TitleRace managers={league.managers} events={league.events} meId={myTeam} />

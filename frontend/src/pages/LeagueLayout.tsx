@@ -1,11 +1,11 @@
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo } from 'react'
 import { NavLink, Outlet, useLocation, useMatch, useParams } from 'react-router-dom'
 import { ArrowLeftRight, ChartLine, Trophy, Zap, type LucideIcon } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
 import { useQuery } from '@tanstack/react-query'
 import { ApiError, fetchLeague, retryNetworkErrors, type LeagueOverview } from '../api'
-import { MyTeamPicker } from '../components/MyTeamPicker'
-import { getTeamPromptSkipped, skipTeamPrompt, useMyTeam } from '../myTeam'
+import { TeamBar } from '../components/TeamBar'
+import { useMyTeam } from '../myTeam'
 import { rememberLeague } from '../recentLeagues'
 import { ErrorCard } from '../components/Status'
 import { Bone, PageSkeleton, StandingsSkeleton } from '../components/Skeleton'
@@ -136,7 +136,7 @@ export default function LeagueLayout() {
 
       <main className={shell}>
         <Suspense fallback={<PageSkeleton />}>
-          {!managerMatch && <TeamBar league={data} />}
+          {!managerMatch && <MyTeamBar league={data} />}
           <Outlet context={{ league: data } satisfies LeagueContext} />
         </Suspense>
       </main>
@@ -146,24 +146,13 @@ export default function LeagueLayout() {
   )
 }
 
-/** "Which team is yours?" at the top of the league tabs until a team is picked or skipped. */
-function TeamBar({ league }: { league: LeagueOverview }) {
+/** "Your team" switcher, always at the top of the league tabs. */
+function MyTeamBar({ league }: { league: LeagueOverview }) {
   const ids = useMemo(() => league.managers.map((m) => m.entry_id), [league.managers])
   const [myTeam, setMyTeam] = useMyTeam(league.league.id, ids)
-  const [skipped, setSkipped] = useState(() => getTeamPromptSkipped(league.league.id))
-  if (myTeam !== null || skipped) return null
   return (
     <div className="mb-6">
-      <MyTeamPicker
-        managers={league.managers}
-        value={null}
-        onPick={setMyTeam}
-        cancelLabel="Not now"
-        onCancel={() => {
-          skipTeamPrompt(league.league.id)
-          setSkipped(true)
-        }}
-      />
+      <TeamBar managers={league.managers} value={myTeam} onChange={setMyTeam} />
     </div>
   )
 }
