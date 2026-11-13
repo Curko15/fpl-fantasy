@@ -26,7 +26,18 @@ function jitter(entryId: number, event: number): number {
 }
 
 /** S4: each gameweek's scores across the league, with one manager's weeks on top. */
-export default function ScoreSpread({ managers, events, meId }: { managers: Manager[]; events: number[]; meId: number }) {
+export default function ScoreSpread({
+  managers,
+  events,
+  meId,
+  subject = 'You',
+}: {
+  managers: Manager[]
+  events: number[]
+  meId: number
+  /** Who the highlighted dots belong to: "You", or a team name on another manager's page. */
+  subject?: string
+}) {
   const colors = useChartColors()
   const [ref, width] = useWidth<HTMLDivElement>()
   const [active, setActive] = useState<number | null>(null)
@@ -67,7 +78,7 @@ export default function ScoreSpread({ managers, events, meId }: { managers: Mana
               width={width}
               height={HEIGHT}
               role="img"
-              aria-label={`Gameweek scores for all ${managers.length} managers, with your scores highlighted`}
+              aria-label={`Gameweek scores for all ${managers.length} managers, with ${subject === 'You' ? 'your' : `${subject}'s`} scores highlighted`}
               className="block touch-pan-y"
               onPointerMove={onPointer}
               onPointerDown={onPointer}
@@ -122,7 +133,7 @@ export default function ScoreSpread({ managers, events, meId }: { managers: Mana
               <div className="mb-1 font-semibold">Gameweek {hover.event}</div>
               {hover.mine && (
                 <div className="flex justify-between gap-2">
-                  <span className="text-ink-2">You</span>
+                  <span className="min-w-0 truncate text-ink-2">{subject}</span>
                   <span className="font-semibold tabular-nums">
                     {hover.mine.points} · {ordinal(hover.mine.rank)}
                   </span>
@@ -144,7 +155,7 @@ export default function ScoreSpread({ managers, events, meId }: { managers: Mana
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 pl-1 text-[11px] text-ink-2">
           <span className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-full bg-accent" />
-            Your team
+            {subject === 'You' ? 'Your team' : subject}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-3.5 rounded-sm bg-track" />
@@ -176,7 +187,7 @@ function Stat({ label, value, note, tone = '' }: { label: string; value: string;
       <dt className="text-[11px] text-muted">{label}</dt>
       <dd>
         <div className={`font-display text-xl font-bold tabular-nums ${tone}`}>{value}</div>
-        <div className="truncate text-[11px] text-muted">{note}</div>
+        <div className="text-[11px] leading-tight text-muted">{note}</div>
       </dd>
     </div>
   )

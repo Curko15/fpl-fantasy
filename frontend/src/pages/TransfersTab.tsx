@@ -9,7 +9,8 @@ import { ErrorCard } from '../components/Status'
 import { TransferCard } from '../components/TransferCard'
 import { useLeagueTransfers } from '../queries'
 import { groupTransfers, market, verdict, type PlayerTally } from '../transfers'
-import { useLeague } from './leagueContext'
+import { YouTag } from '../components/YouTag'
+import { useLeague, useMe } from './leagueContext'
 
 type View = 'feed' | 'market'
 
@@ -119,7 +120,10 @@ function FeedView({
   const shown = managerFilter ? week.filter((t) => t.entry_id === managerFilter) : week
   const cards = groupTransfers(shown, managers)[0]?.cards ?? []
   // Only managers who moved this gameweek are worth filtering by.
-  const movers = league.managers.filter((mgr) => week.some((t) => t.entry_id === mgr.entry_id))
+  const [meId] = useMe()
+  const movers = league.managers
+    .filter((mgr) => week.some((t) => t.entry_id === mgr.entry_id))
+    .sort((a, b) => Number(b.entry_id === meId) - Number(a.entry_id === meId))
 
   return (
     <>
@@ -144,6 +148,7 @@ function FeedView({
           {movers.map((mgr) => (
             <option key={mgr.entry_id} value={mgr.entry_id}>
               {mgr.team_name}
+              {mgr.entry_id === meId ? ' (you)' : ''}
             </option>
           ))}
         </select>
@@ -166,6 +171,7 @@ function FeedView({
 }
 
 function MarketView({ week, managers }: { week: Transfer[]; managers: Map<number, Manager> }) {
+  const [meId] = useMe()
   const m = useMemo(() => market(week), [week])
   return (
     <>
@@ -193,9 +199,12 @@ function MarketView({ week, managers }: { week: Transfer[]; managers: Map<number
             return (
               <li key={`${t.entry_id}-${t.time}-${t.player_in.id}`} className="flex items-center gap-3 px-3.5 py-2.5">
                 <div className="min-w-0 flex-1">
-                  <Link to={`../manager/${t.entry_id}`} className="block truncate text-xs text-muted">
-                    {managers.get(t.entry_id)?.team_name}
-                  </Link>
+                  <div className="flex items-center gap-1.5">
+                    <Link to={`../manager/${t.entry_id}`} className="min-w-0 truncate text-xs text-muted">
+                      {managers.get(t.entry_id)?.team_name}
+                    </Link>
+                    {t.entry_id === meId && <YouTag />}
+                  </div>
                   <div className="truncate text-sm">
                     <span className="text-muted">{t.player_out.name}</span> →{' '}
                     <span className="font-semibold">{t.player_in.name}</span>
@@ -218,6 +227,7 @@ function MarketView({ week, managers }: { week: Transfer[]; managers: Map<number
 
 function MoveCard({ title, t, managers, good }: { title: string; t: Transfer; managers: Map<number, Manager>; good: boolean }) {
   const v = verdict(t)!
+  const [meId] = useMe()
   return (
     <article
       className={`relative rounded-3xl border p-3.5 ${good ? 'border-transparent bg-pop text-pop-ink' : 'border-down/25 bg-down/10'}`}
@@ -231,10 +241,13 @@ function MoveCard({ title, t, managers, good }: { title: string; t: Transfer; ma
       <div className="mt-1 truncate text-sm font-semibold">
         {t.player_out.name} → {t.player_in.name}
       </div>
-      <Link to={`../manager/${t.entry_id}`} className="block truncate text-xs opacity-75 after:absolute after:inset-0">
-        {managers.get(t.entry_id)?.team_name}
-        {t.kind === 'hit' && ' · hit'}
-      </Link>
+      <div className="flex items-center gap-1.5">
+        <Link to={`../manager/${t.entry_id}`} className="min-w-0 truncate text-xs opacity-75 after:absolute after:inset-0">
+          {managers.get(t.entry_id)?.team_name}
+          {t.kind === 'hit' && ' · hit'}
+        </Link>
+        {t.entry_id === meId && <YouTag onPop={good} />}
+      </div>
     </article>
   )
 }

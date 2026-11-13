@@ -10,8 +10,9 @@ Read this first in a new session, together with `docs/PLAN.md`.
 | #12 | `dashboard` | **open** | League home as a dashboard (design A "Floodlight") + System / Light / Dark theme switch |
 | #13 | `tabs-redesign` | **open, stacked on #12** | Transfers (Feed / Market), Chips (cards + timeline), Awards (Gameweek / Season) |
 | #14 | `season-charts` | **open, stacked on #13** | Season charts for big leagues: Focus + Race switch, "Your weeks vs the league", "my team" choice |
+| #15 | `my-team-everywhere` | **open, stacked on #14** | "You" highlights on every tab, manager page restyle with "This is my team" and weeks-vs-league |
 
-Merge #12, then #13, then #14. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
+Merge #12, then #13, then #14, then #15. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
 
 ## Design decisions (all chosen by the user from canvas prototypes)
 
@@ -30,13 +31,20 @@ Prototype canvas (private to the user): https://claude.ai/artifact/7yzcePz8fTcqb
 - Components: `FocusChart` (S1), `TitleRace` (S5), `ScoreSpread` (S4), `MyTeamPicker`. Chart hex colours live in `src/chartColors.ts` (keep in step with `index.css`).
 - Highlight colours: me = accent, leader = ink, up to 5 rivals from a validated subset of the categorical palette, so at most 5 rivals + compares. Leagues of ≤ 7 highlight everyone.
 - "Behind leader" scales to the highlighted lines; faint far-behind lines run off the bottom on purpose.
-- Not done yet: using "my team" elsewhere (table row, awards), and S4 on the manager page.
+- `useMe()` in `pages/leagueContext.ts` gives any league screen the saved team; `components/YouTag.tsx` is the shared pill (`onPop` on lime/neon cards). Used in the table (row tint, pinned under the top 10), transfers, awards (incl. my row in season races), chips and the manager page (#15).
 
 ## Backlog
 
 1. **Matchday recap** (from prototype C "Matchday feed"): a new feature/tab with the GW headline ("Ivan storms to 3rd with the week's best 81"), a top-3 podium, and a "week in moments" timeline mixing awards, chips played, hits and captain fails.
-2. **Manager page restyle**: the last screen still in the old style.
-3. **Deployment**: Vercel (frontend) + Render (backend) + Neon (Postgres), as in `docs/PLAN.md`. The user needs to create the accounts.
+2. **Head-to-head**: pick two managers, compare points, ranks, transfers, captains and chips side by side.
+3. **Live gameweek view**: live scores and rank changes while a GW is in progress (needs more frequent live-points fetching in the backend).
+4. **Polish**: lazy-load the chart code (Overview chunk is ~400 KB, mostly Recharts); mark managers who joined mid-season in charts and the race.
+5. **Deployment** (postponed by the user, 2026-11-13). Agreed plan, all free tiers:
+   - Vercel Hobby (frontend), Render free web service (backend), Neon free Postgres (`FPL_DATABASE_URL`).
+   - Render free sleeps after ~15 min idle: 30–60 s cold start, and the in-process 06:00 refresh won't fire while asleep. Fix with a free scheduled ping (GitHub Actions cron or cron-job.org). Always-on Render is ~$7/month if needed.
+   - User: create the three accounts with GitHub, copy the Neon connection string, connect the repo.
+   - Us (one PR): Postgres URL support check, `render.yaml`, `vercel.json` rewriting `/api/*` to Render, wake-up cron, `docs/DEPLOY.md`.
+   - Check the providers' current free-tier limits at signup time.
 
 ## How we work
 

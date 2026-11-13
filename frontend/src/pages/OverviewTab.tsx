@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Award, AwardWinner, LeagueOverview, Manager } from '../api'
 import { AWARDS, awardHeadline, awardStory } from '../awards'
@@ -7,14 +7,15 @@ import FocusChart from '../components/FocusChart'
 import { MyTeamPicker } from '../components/MyTeamPicker'
 import { PlayerPhoto } from '../components/PlayerPhoto'
 import ScoreSpread from '../components/ScoreSpread'
+import { SectionHeading } from '../components/SectionHeading'
 import { Segmented } from '../components/Segmented'
 import { Bone } from '../components/Skeleton'
 import StandingsTable from '../components/StandingsTable'
 import TitleRace from '../components/TitleRace'
 import { chipsLeft, gameweekSummary, transferPulse, type PlayerCount } from '../dashboard'
-import { useMyTeam } from '../myTeam'
 import { useLeagueAwards, useLeagueTransfers } from '../queries'
-import { useLeague } from './leagueContext'
+import { YouTag } from '../components/YouTag'
+import { useLeague, useMe } from './leagueContext'
 
 export default function OverviewTab() {
   const { league } = useLeague()
@@ -41,8 +42,7 @@ export default function OverviewTab() {
 }
 
 function SeasonCharts({ league }: { league: LeagueOverview }) {
-  const ids = useMemo(() => league.managers.map((m) => m.entry_id), [league.managers])
-  const [myTeam, setMyTeam] = useMyTeam(league.league.id, ids)
+  const [myTeam, setMyTeam] = useMe()
   const [view, setView] = useState<'focus' | 'race'>('focus')
   const [picking, setPicking] = useState(false)
   if (league.events.length === 0) return null
@@ -99,17 +99,6 @@ function SeasonCharts({ league }: { league: LeagueOverview }) {
         </section>
       )}
     </>
-  )
-}
-
-function SectionHeading({ id, children, aside }: { id: string; children: ReactNode; aside?: ReactNode }) {
-  return (
-    <div className="mb-3 flex items-baseline justify-between gap-2">
-      <h2 id={id} className="font-display text-lg font-bold tracking-tight">
-        {children}
-      </h2>
-      {aside}
-    </div>
   )
 }
 
@@ -210,6 +199,7 @@ function AwardsStrip({ leagueId, managers }: { leagueId: number; managers: Map<n
 function AwardCard({ award, winner, managers }: { award: Award; winner: AwardWinner; managers: Map<number, Manager> }) {
   const meta = AWARDS[award.key]
   const team = managers.get(winner.entry_id)?.team_name ?? `Manager ${winner.entry_id}`
+  const [meId] = useMe()
   return (
     <li className={`relative w-56 shrink-0 snap-start rounded-2xl border p-3.5 ${awardTone(award)}`}>
       <div className="flex items-start justify-between gap-2">
@@ -223,12 +213,12 @@ function AwardCard({ award, winner, managers }: { award: Award; winner: AwardWin
         )}
       </div>
       <div className="mt-2 font-display text-3xl leading-none font-bold tabular-nums">{awardHeadline(award.key, winner)}</div>
-      <Link
-        to={`manager/${winner.entry_id}`}
-        className="mt-1.5 block truncate text-sm font-semibold after:absolute after:inset-0"
-      >
-        {team}
-      </Link>
+      <div className="mt-1.5 flex items-center gap-1.5">
+        <Link to={`manager/${winner.entry_id}`} className="min-w-0 truncate text-sm font-semibold after:absolute after:inset-0">
+          {team}
+        </Link>
+        {winner.entry_id === meId && <YouTag onPop={award.key === 'manager_of_week'} />}
+      </div>
       <p className="mt-0.5 line-clamp-2 text-xs opacity-80">{awardStory(award.key, winner)}</p>
     </li>
   )

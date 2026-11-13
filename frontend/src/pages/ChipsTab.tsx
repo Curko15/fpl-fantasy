@@ -4,7 +4,8 @@ import { Clock } from 'lucide-react'
 import type { Manager } from '../api'
 import { chipColor, chipHalfCards, chipHalves, chipLabel, type ChipHalf, type ChipHalfCard } from '../chips'
 import { Segmented } from '../components/Segmented'
-import { useLeague } from './leagueContext'
+import { YouTag } from '../components/YouTag'
+import { useLeague, useMe } from './leagueContext'
 
 const HOLDER_FACES = 5
 
@@ -98,6 +99,8 @@ function Deadline({ half, nextEvent, unplayed }: { half: ChipHalf; nextEvent: nu
 }
 
 function ChipCard({ card, managers }: { card: ChipHalfCard; managers: number }) {
+  const [meId] = useMe()
+  const holders = [...card.holders].sort((x, y) => Number(y.entry_id === meId) - Number(x.entry_id === meId))
   const { label, short } = chipLabel(card.name)
   const color = chipColor(card.name)
   const used = card.plays.length
@@ -135,7 +138,10 @@ function ChipCard({ card, managers }: { card: ChipHalfCard; managers: number }) 
         >
           <span className="text-[11px] font-bold tracking-[0.06em] text-muted uppercase">Best</span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold">{card.best.manager.team_name}</div>
+            <div className="flex items-center gap-1.5">
+              <span className="truncate text-sm font-semibold">{card.best.manager.team_name}</span>
+              {card.best.manager.entry_id === meId && <YouTag />}
+            </div>
             <div className="text-xs text-muted">GW{card.best.event}</div>
           </div>
           <span className="font-display text-xl font-bold tabular-nums">{card.best.points}</span>
@@ -146,11 +152,13 @@ function ChipCard({ card, managers }: { card: ChipHalfCard; managers: number }) 
         {card.holders.length > 0 ? (
           <>
             <div className="flex">
-              {card.holders.slice(0, HOLDER_FACES).map((m) => (
+              {holders.slice(0, HOLDER_FACES).map((m) => (
                 <span
                   key={m.entry_id}
                   title={m.team_name}
-                  className="-mr-2 grid size-[30px] place-items-center rounded-full border-2 border-card bg-raised text-[11px] font-bold"
+                  className={`-mr-2 grid size-[30px] place-items-center rounded-full border-2 text-[11px] font-bold ${
+                    m.entry_id === meId ? 'border-accent bg-accent text-accent-ink' : 'border-card bg-raised'
+                  }`}
                 >
                   {initial(m)}
                 </span>
@@ -174,7 +182,10 @@ function Timeline({ half, managers, currentEvent }: { half: ChipHalf; managers: 
   const pos = (e: number) => `${((e - half.start) / span) * 100}%`
   const now = currentEvent !== null && currentEvent >= half.start && currentEvent <= half.stop ? currentEvent : null
   const ticks = [half.start, Math.round(half.start + span / 3), Math.round(half.start + (2 * span) / 3), half.stop]
-  const plays = managers.map((m) => ({
+  const [meId] = useMe()
+  // My row first, then the table order.
+  const ordered = [...managers].sort((x, y) => Number(y.entry_id === meId) - Number(x.entry_id === meId))
+  const plays = ordered.map((m) => ({
     manager: m,
     plays: m.history.filter((h) => h.chip && h.event >= half.start && h.event <= half.stop),
   }))
@@ -202,9 +213,15 @@ function Timeline({ half, managers, currentEvent }: { half: ChipHalf; managers: 
           )}
           {plays.map(({ manager, plays: own }) => (
             <div key={manager.entry_id} className="h-12">
-              <Link to={`../manager/${manager.entry_id}`} className="-mx-3 block truncate text-xs font-semibold">
-                {manager.team_name}
-              </Link>
+              <div className="-mx-3 flex items-center gap-1.5">
+                <Link
+                  to={`../manager/${manager.entry_id}`}
+                  className={`min-w-0 truncate text-xs ${manager.entry_id === meId ? 'font-bold text-accent' : 'font-semibold'}`}
+                >
+                  {manager.team_name}
+                </Link>
+                {manager.entry_id === meId && <YouTag />}
+              </div>
               <div className="relative mt-1 h-[22px]">
                 <span aria-hidden className="absolute inset-x-0 top-2.5 h-0.5 rounded-full bg-line" />
                 {own.map((h, i) => {

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Manager } from '../api'
 import { rankForm } from '../dashboard'
+import { useMe } from '../pages/leagueContext'
+import { YouTag } from './YouTag'
 
 const COLLAPSED = 10
 
@@ -41,44 +43,61 @@ function RankSpark({ ranks, size }: { ranks: number[]; size: number }) {
 
 export default function StandingsTable({ managers, events }: { managers: Manager[]; events: number[] }) {
   const [expanded, setExpanded] = useState(false)
+  const [meId] = useMe()
   const shown = expanded ? managers : managers.slice(0, COLLAPSED)
+  // Keep my row visible under the top 10 when the table is collapsed.
+  const pinned = expanded ? undefined : managers.slice(COLLAPSED).find((m) => m.entry_id === meId)
+
+  function row(m: Manager) {
+    const move = movement(m)
+    const isMe = m.entry_id === meId
+    return (
+      <li key={m.entry_id} className={`relative flex items-center gap-3 px-3.5 py-3 ${isMe ? 'bg-accent/8' : 'active:bg-raised'}`}>
+        {isMe && <span aria-hidden className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-accent" />}
+        <span className={`w-6 shrink-0 font-display text-base font-bold tabular-nums ${m.rank === 1 || isMe ? 'text-accent' : ''}`}>
+          {m.rank}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            {/* Stretched link: the whole row opens the manager page. */}
+            <Link to={`manager/${m.entry_id}`} className="min-w-0 truncate text-sm font-semibold after:absolute after:inset-0">
+              {m.team_name}
+            </Link>
+            {isMe && <YouTag />}
+          </div>
+          <div className="truncate text-xs text-muted">
+            {m.player_name}
+            {move && (
+              <>
+                {' · '}
+                <span className={`font-semibold ${move.tone}`} aria-label={move.aria}>
+                  {move.label}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <RankSpark ranks={rankForm(m, events)} size={managers.length} />
+        <div className="w-12 shrink-0 text-right">
+          <div className="font-display text-base font-bold tabular-nums">{m.total}</div>
+          <div className="text-[11px] text-muted tabular-nums">{m.event_total} GW</div>
+        </div>
+      </li>
+    )
+  }
+
   return (
     <>
       <ol className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
-        {shown.map((m) => {
-          const move = movement(m)
-          return (
-            <li key={m.entry_id} className="relative flex items-center gap-3 px-3.5 py-3 active:bg-raised">
-              <span
-                className={`w-6 shrink-0 font-display text-base font-bold tabular-nums ${m.rank === 1 ? 'text-accent' : ''}`}
-              >
-                {m.rank}
-              </span>
-              <div className="min-w-0 flex-1">
-                {/* Stretched link: the whole row opens the manager page. */}
-                <Link to={`manager/${m.entry_id}`} className="block truncate text-sm font-semibold after:absolute after:inset-0">
-                  {m.team_name}
-                </Link>
-                <div className="truncate text-xs text-muted">
-                  {m.player_name}
-                  {move && (
-                    <>
-                      {' · '}
-                      <span className={`font-semibold ${move.tone}`} aria-label={move.aria}>
-                        {move.label}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <RankSpark ranks={rankForm(m, events)} size={managers.length} />
-              <div className="w-12 shrink-0 text-right">
-                <div className="font-display text-base font-bold tabular-nums">{m.total}</div>
-                <div className="text-[11px] text-muted tabular-nums">{m.event_total} GW</div>
-              </div>
+        {shown.map(row)}
+        {pinned && (
+          <>
+            <li aria-hidden className="py-0.5 text-center text-xs leading-4 text-muted">
+              ⋯
             </li>
-          )
-        })}
+            {row(pinned)}
+          </>
+        )}
       </ol>
       {managers.length > COLLAPSED && (
         <button

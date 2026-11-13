@@ -9,7 +9,8 @@ import { Segmented } from '../components/Segmented'
 import { AwardsSkeleton } from '../components/Skeleton'
 import { ErrorCard } from '../components/Status'
 import { useLeagueAwards } from '../queries'
-import { useLeague } from './leagueContext'
+import { YouTag } from '../components/YouTag'
+import { useLeague, useMe } from './leagueContext'
 
 type View = 'week' | 'season'
 
@@ -118,6 +119,7 @@ function GameweekView({
 
 function Spotlight({ award, managers, average }: { award: Award; managers: Map<number, Manager>; average: number | null }) {
   const Icon = AWARDS.manager_of_week.icon
+  const [meId] = useMe()
   return (
     <section aria-label="Manager of the week" className="relative overflow-hidden rounded-[1.75rem] bg-pop p-5 text-pop-ink">
       <Icon aria-hidden size={150} strokeWidth={1.2} className="pointer-events-none absolute -top-5 -right-6 opacity-10" />
@@ -132,9 +134,12 @@ function Spotlight({ award, managers, average }: { award: Award; managers: Map<n
             </span>
             <div className="min-w-0">
               <div className="font-display text-5xl leading-[0.85] font-bold tracking-tight tabular-nums">{w.value}</div>
-              <Link to={`../manager/${w.entry_id}`} className="mt-1 block truncate font-bold after:absolute after:inset-0">
-                {team}
-              </Link>
+              <div className="mt-1 flex items-center gap-1.5">
+                <Link to={`../manager/${w.entry_id}`} className="min-w-0 truncate font-bold after:absolute after:inset-0">
+                  {team}
+                </Link>
+                {w.entry_id === meId && <YouTag onPop />}
+              </div>
               <div className="truncate text-xs opacity-75">
                 {m?.player_name}
                 {average !== null && ` · ${w.value - average} above the league average`}
@@ -169,6 +174,7 @@ function AwardTile({ award, winner, managers, fame }: { award: Award; winner: Aw
   const meta = AWARDS[award.key]
   const Icon = meta.icon
   const note = awardNote(award)
+  const [meId] = useMe()
   return (
     <li className={`relative flex flex-col rounded-3xl border p-3.5 ${fame ? 'border-up/25 bg-up/8' : 'border-down/25 bg-down/8'}`}>
       <div className="flex items-start justify-between gap-2">
@@ -179,9 +185,12 @@ function AwardTile({ award, winner, managers, fame }: { award: Award; winner: Aw
       </div>
       <div className="mt-2.5 text-[11px] leading-tight font-bold tracking-[0.04em] text-muted uppercase">{meta.title}</div>
       <div className="mt-0.5 font-display text-2xl font-bold tabular-nums">{awardHeadline(award.key, winner)}</div>
-      <Link to={`../manager/${winner.entry_id}`} className="truncate text-sm font-semibold after:absolute after:inset-0">
-        {managers.get(winner.entry_id)?.team_name ?? `Manager ${winner.entry_id}`}
-      </Link>
+      <div className="flex items-center gap-1.5">
+        <Link to={`../manager/${winner.entry_id}`} className="min-w-0 truncate text-sm font-semibold after:absolute after:inset-0">
+          {managers.get(winner.entry_id)?.team_name ?? `Manager ${winner.entry_id}`}
+        </Link>
+        {winner.entry_id === meId && <YouTag />}
+      </div>
       <p className="mt-0.5 text-xs text-muted">{awardStory(award.key, winner)}</p>
       {note && <p className="mt-1 text-xs text-ink-2">{note}</p>}
     </li>
@@ -272,6 +281,10 @@ function Race({ awardKey, ranking, managers }: { awardKey: AwardKey; ranking: { 
   const max = ranking[0].wins
   const rows = open ? ranking : ranking.slice(0, RACE_TOP)
   const tone = meta.fame ? 'up' : 'down'
+  const [meId] = useMe()
+  // Show my row even when it's outside the top 3.
+  const mine = open ? -1 : ranking.findIndex((r) => r.entry_id === meId)
+  const extra = mine >= RACE_TOP ? [{ ...ranking[mine], place: mine }] : []
   return (
     <section className="rounded-3xl border border-line bg-card p-3.5" aria-label={meta.title}>
       <div className="flex items-center gap-2.5">
@@ -281,10 +294,13 @@ function Race({ awardKey, ranking, managers }: { awardKey: AwardKey; ranking: { 
         <h2 className="flex-1 text-base font-bold">{meta.title}</h2>
       </div>
       <ol className="mt-2.5 space-y-2">
-        {rows.map((r, i) => (
+        {[...rows.map((r, i) => ({ ...r, place: i })), ...extra].map((r) => (
           <li key={r.entry_id} className="grid grid-cols-[1.1rem_minmax(0,7.5rem)_minmax(0,1fr)_2rem] items-center gap-2">
-            <span className="text-xs font-bold text-muted tabular-nums">{i + 1}</span>
-            <Link to={`../manager/${r.entry_id}`} className="truncate text-sm font-semibold">
+            <span className={`text-xs font-bold tabular-nums ${r.entry_id === meId ? 'text-accent' : 'text-muted'}`}>{r.place + 1}</span>
+            <Link
+              to={`../manager/${r.entry_id}`}
+              className={`truncate text-sm ${r.entry_id === meId ? 'font-bold text-accent' : 'font-semibold'}`}
+            >
               {managers.get(r.entry_id)?.team_name ?? r.entry_id}
             </Link>
             <span className="h-2 rounded-full bg-raised">
