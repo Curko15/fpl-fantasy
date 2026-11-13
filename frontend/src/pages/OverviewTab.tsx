@@ -158,7 +158,7 @@ function AwardsStrip({ leagueId, managers }: { leagueId: number; managers: Map<n
 
   return (
     <section aria-labelledby="awards-heading">
-      <SectionHeading id="awards-heading" aside={week && <SeeAll to="awards" />}>
+      <SectionHeading id="awards-heading" aside={week && <SeeAll to="awards?view=week" />}>
         {week ? `GW${week.event} awards` : 'Awards'}
       </SectionHeading>
       <ul className="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-px-4 px-4 pb-1 [scrollbar-width:none]">

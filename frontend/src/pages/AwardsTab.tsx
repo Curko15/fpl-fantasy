@@ -11,8 +11,9 @@ import { ErrorCard } from '../components/Status'
 import { useLeagueAwards } from '../queries'
 import { YouTag } from '../components/YouTag'
 import { useLeague, useMe } from './leagueContext'
+import RecapView from './RecapView'
 
-type View = 'week' | 'season'
+type View = 'recap' | 'week' | 'season'
 
 const initial = (name: string) => [...name][0]?.toUpperCase() ?? '?'
 
@@ -21,7 +22,8 @@ export default function AwardsTab() {
   const [params, setParams] = useSearchParams()
   const query = useLeagueAwards(league.league.id)
   const managers = useMemo(() => new Map(league.managers.map((m) => [m.entry_id, m])), [league.managers])
-  const view: View = params.get('view') === 'season' ? 'season' : 'week'
+  const viewParam = params.get('view')
+  const view: View = viewParam === 'season' || viewParam === 'week' ? viewParam : 'recap'
 
   function setParam(key: string, value: string | null) {
     setParams(
@@ -43,10 +45,31 @@ export default function AwardsTab() {
   const data = query.data
   const requested = Number(params.get('gw'))
   const selected = data.gameweeks.find((g) => g.event === requested) ?? data.gameweeks[0]
+  const recapEvents = [...league.events].reverse() // newest first
+  const recapEvent = recapEvents.includes(requested) ? requested : recapEvents[0]
+
+  if (recapEvents.length === 0) {
+    return (
+      <p className="rounded-2xl border border-line bg-card p-4 text-sm text-ink-2">
+        The recap and awards start once the first gameweek has been played.
+      </p>
+    )
+  }
 
   return (
     <div className="space-y-4">
-      {data.pending_events.length > 0 && (
+      <Segmented
+        label="Awards view"
+        value={view}
+        onChange={(v) => setParam('view', v === 'recap' ? null : v)}
+        options={[
+          { value: 'recap', label: 'Recap' },
+          { value: 'week', label: 'Awards' },
+          { value: 'season', label: 'Season' },
+        ]}
+      />
+
+      {view !== 'recap' && data.pending_events.length > 0 && (
         <p className="flex items-center gap-2 rounded-xl bg-accent/10 px-3 py-2 text-xs text-ink-2" role="status">
           <span className="size-3 shrink-0 animate-spin rounded-full border-2 border-line border-t-accent" />
           Collecting team data for {data.pending_events.length} gameweek
@@ -54,36 +77,35 @@ export default function AwardsTab() {
         </p>
       )}
 
-      {data.gameweeks.length === 0 ? (
+      {view === 'recap' ? (
+        <>
+          <GameweekPills events={recapEvents} selected={recapEvent} onSelect={(e) => setParam('gw', String(e))} />
+          <div className="space-y-7">
+            <RecapView
+              league={league}
+              event={recapEvent}
+              awards={data.gameweeks.find((g) => g.event === recapEvent)?.awards}
+              awardsPending={data.pending_events.includes(recapEvent)}
+            />
+          </div>
+        </>
+      ) : data.gameweeks.length === 0 ? (
         data.pending_events.length === 0 && (
           <p className="rounded-2xl border border-line bg-card p-4 text-sm text-ink-2">
             Awards are handed out once a gameweek is finished. Check back after the first one.
           </p>
         )
-      ) : (
+      ) : view === 'week' && selected ? (
         <>
-          <Segmented
-            label="Awards view"
-            value={view}
-            onChange={(v) => setParam('view', v === 'week' ? null : v)}
-            options={[
-              { value: 'week', label: 'Gameweek' },
-              { value: 'season', label: 'Season' },
-            ]}
+          <GameweekPills
+            events={data.gameweeks.map((g) => g.event)}
+            selected={selected.event}
+            onSelect={(e) => setParam('gw', String(e))}
           />
-          {view === 'week' && selected ? (
-            <>
-              <GameweekPills
-                events={data.gameweeks.map((g) => g.event)}
-                selected={selected.event}
-                onSelect={(e) => setParam('gw', String(e))}
-              />
-              <GameweekView league={league} event={selected.event} awards={selected.awards} managers={managers} />
-            </>
-          ) : (
-            <SeasonView data={data} managers={managers} />
-          )}
+          <GameweekView league={league} event={selected.event} awards={selected.awards} managers={managers} />
         </>
+      ) : (
+        <SeasonView data={data} managers={managers} />
       )}
     </div>
   )

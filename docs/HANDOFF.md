@@ -12,8 +12,9 @@ Read this first in a new session, together with `docs/PLAN.md`.
 | #14 | `season-charts` | **open, stacked on #13** | Season charts for big leagues: Focus + Race switch, "Your weeks vs the league", "my team" choice |
 | #15 | `my-team-everywhere` | **open, stacked on #14** | "You" highlights on every tab, manager page restyle with "This is my team" and weeks-vs-league |
 | #16 | `team-bar` | **open, stacked on #15** | Always-on "Your team" switcher bar at the top of every league tab |
+| #17 | `matchday-recap` | **open, stacked on #16** | Matchday recap as the first view of the Awards tab |
 
-Merge #12, then #13, #14, #15 and #16, in that order. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
+Merge #12, then #13, #14, #15, #16 and #17, in that order. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
 
 ## Design decisions (all chosen by the user from canvas prototypes)
 
@@ -34,13 +35,19 @@ Prototype canvas (private to the user): https://claude.ai/artifact/7yzcePz8fTcqb
 - "Behind leader" scales to the highlighted lines; faint far-behind lines run off the bottom on purpose.
 - `useMe()` in `pages/leagueContext.ts` gives any league screen the saved team; `components/YouTag.tsx` is the shared pill (`onPop` on lime/neon cards). Used in the table (row tint, pinned under the top 10), transfers, awards (incl. my row in season races), chips and the manager page (#15).
 
+## Matchday recap (done in #17)
+
+- Lives in the Awards tab: Recap (default) / Awards / Season. Recap has its own gameweek pills (every played GW, incl. one in progress); `?view=week` opens the awards.
+- Maths in `src/recap.ts` (tested): `standingsAfter` (table + movement after a GW), `recapHeadline` (generated headline + leader line), `recapMoments` (awards, chips, hits, biggest climb/drop in story order, without repeating what an award already says).
+- UI in `pages/RecapView.tsx`: headline card with podium, "The week in moments" timeline, "The rest" of the table (my row pinned). Prototype C's look was adapted to Floodlight tokens.
+- Idea for later: a recap teaser card on the Overview linking to it.
+
 ## Backlog
 
-1. **Matchday recap** (from prototype C "Matchday feed"): a new feature/tab with the GW headline ("Ivan storms to 3rd with the week's best 81"), a top-3 podium, and a "week in moments" timeline mixing awards, chips played, hits and captain fails.
-2. **Head-to-head**: pick two managers, compare points, ranks, transfers, captains and chips side by side.
-3. **Live gameweek view**: live scores and rank changes while a GW is in progress (needs more frequent live-points fetching in the backend).
-4. **Polish**: lazy-load the chart code (Overview chunk is ~400 KB, mostly Recharts); mark managers who joined mid-season in charts and the race.
-5. **Deployment** (postponed by the user, 2026-11-13). Agreed plan, all free tiers:
+1. **Head-to-head**: pick two managers, compare points, ranks, transfers, captains and chips side by side.
+2. **Live gameweek view**: live scores and rank changes while a GW is in progress (needs more frequent live-points fetching in the backend).
+3. **Polish**: lazy-load the chart code (Overview chunk is ~400 KB, mostly Recharts); mark managers who joined mid-season in charts and the race.
+4. **Deployment** (postponed by the user, 2026-11-13). Agreed plan, all free tiers:
    - Vercel Hobby (frontend), Render free web service (backend), Neon free Postgres (`FPL_DATABASE_URL`).
    - Render free sleeps after ~15 min idle: 30–60 s cold start, and the in-process 06:00 refresh won't fire while asleep. Fix with a free scheduled ping (GitHub Actions cron or cron-job.org). Always-on Render is ~$7/month if needed.
    - User: create the three accounts with GitHub, copy the Neon connection string, connect the repo.
