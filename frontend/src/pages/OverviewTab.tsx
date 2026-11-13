@@ -1,13 +1,18 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Award, AwardWinner, LeagueOverview, Manager } from '../api'
 import { AWARDS, awardHeadline, awardStory } from '../awards'
 import { chipLabel } from '../chips'
-import LeagueChart from '../components/LeagueChart'
+import FocusChart from '../components/FocusChart'
+import { MyTeamPicker } from '../components/MyTeamPicker'
 import { PlayerPhoto } from '../components/PlayerPhoto'
+import ScoreSpread from '../components/ScoreSpread'
+import { Segmented } from '../components/Segmented'
 import { Bone } from '../components/Skeleton'
 import StandingsTable from '../components/StandingsTable'
+import TitleRace from '../components/TitleRace'
 import { chipsLeft, gameweekSummary, transferPulse, type PlayerCount } from '../dashboard'
+import { useMyTeam } from '../myTeam'
 import { useLeagueAwards, useLeagueTransfers } from '../queries'
 import { useLeague } from './leagueContext'
 
@@ -30,11 +35,70 @@ export default function OverviewTab() {
       <TransferPulseSection leagueId={league.league.id} managers={managers} />
       <ChipsLeft league={league} />
 
-      <section aria-labelledby="chart-heading">
-        <SectionHeading id="chart-heading">Season so far</SectionHeading>
-        <LeagueChart managers={league.managers} events={league.events} />
-      </section>
+      <SeasonCharts league={league} />
     </div>
+  )
+}
+
+function SeasonCharts({ league }: { league: LeagueOverview }) {
+  const ids = useMemo(() => league.managers.map((m) => m.entry_id), [league.managers])
+  const [myTeam, setMyTeam] = useMyTeam(league.league.id, ids)
+  const [view, setView] = useState<'focus' | 'race'>('focus')
+  const [picking, setPicking] = useState(false)
+  if (league.events.length === 0) return null
+
+  const picker = (myTeam === null || picking) && (
+    <MyTeamPicker
+      managers={league.managers}
+      value={myTeam}
+      onPick={(id) => {
+        setMyTeam(id)
+        setPicking(false)
+      }}
+      onCancel={myTeam === null ? undefined : () => setPicking(false)}
+    />
+  )
+
+  return (
+    <>
+      <section aria-labelledby="chart-heading">
+        <SectionHeading id="chart-heading" aside={<span className="text-xs text-muted">{league.managers.length} managers</span>}>
+          Season so far
+        </SectionHeading>
+        {picker && <div className="mb-3">{picker}</div>}
+        <Segmented
+          label="Season view"
+          value={view}
+          onChange={setView}
+          className="mb-3"
+          options={[
+            { value: 'focus', label: 'Focus' },
+            { value: 'race', label: 'Race' },
+          ]}
+        />
+        {view === 'focus' ? (
+          <FocusChart
+            key={myTeam ?? 'leader'}
+            managers={league.managers}
+            events={league.events}
+            meId={myTeam}
+            onChangeTeam={() => setPicking(true)}
+          />
+        ) : (
+          <TitleRace managers={league.managers} events={league.events} meId={myTeam} />
+        )}
+      </section>
+
+      {myTeam !== null && (
+        <section aria-labelledby="spread-heading">
+          <SectionHeading id="spread-heading">Your weeks vs the league</SectionHeading>
+          <p className="-mt-2 mb-3 text-sm text-muted">
+            Every dot is one manager's gameweek score. The band is the middle half of the league.
+          </p>
+          <ScoreSpread managers={league.managers} events={league.events} meId={myTeam} />
+        </section>
+      )}
+    </>
   )
 }
 
