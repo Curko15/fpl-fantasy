@@ -7,11 +7,13 @@ export function MyTeamPicker({
   value,
   onPick,
   onCancel,
+  cancelLabel = 'Cancel',
 }: {
   managers: Manager[]
   value: number | null
   onPick: (entryId: number) => void
   onCancel?: () => void
+  cancelLabel?: string
 }) {
   const id = useId()
   const sorted = [...managers].sort((a, b) => a.team_name.localeCompare(b.team_name))
@@ -20,7 +22,7 @@ export function MyTeamPicker({
       <label htmlFor={id} className="font-display text-base font-bold">
         Which team is yours?
       </label>
-      <p className="mt-0.5 text-sm text-muted">We'll highlight it in the charts. Saved on this device only.</p>
+      <p className="mt-0.5 text-sm text-muted">We'll highlight it across the app. Saved on this device only.</p>
       <div className="mt-3 flex gap-2">
         <select
           id={id}
@@ -39,7 +41,7 @@ export function MyTeamPicker({
         </select>
         {onCancel && (
           <button type="button" onClick={onCancel} className="h-11 shrink-0 px-3 text-sm font-semibold text-ink-2">
-            Cancel
+            {cancelLabel}
           </button>
         )}
       </div>

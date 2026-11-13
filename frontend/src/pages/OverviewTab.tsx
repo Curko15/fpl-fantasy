@@ -47,7 +47,7 @@ function SeasonCharts({ league }: { league: LeagueOverview }) {
   const [picking, setPicking] = useState(false)
   if (league.events.length === 0) return null
 
-  const picker = (myTeam === null || picking) && (
+  const picker = picking && (
     <MyTeamPicker
       managers={league.managers}
       value={myTeam}
@@ -55,7 +55,7 @@ function SeasonCharts({ league }: { league: LeagueOverview }) {
         setMyTeam(id)
         setPicking(false)
       }}
-      onCancel={myTeam === null ? undefined : () => setPicking(false)}
+      onCancel={() => setPicking(false)}
     />
   )
 

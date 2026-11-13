@@ -188,11 +188,9 @@ export default function FocusChart({
 
       <div className="mt-4 flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold">{meId === null ? 'Leader and chasers' : 'Your team and rivals'}</h3>
-        {meId !== null && (
-          <button type="button" onClick={onChangeTeam} className="-my-2 h-11 px-1 text-sm font-semibold text-accent">
-            Change team
-          </button>
-        )}
+        <button type="button" onClick={onChangeTeam} className="-my-2 h-11 px-1 text-sm font-semibold text-accent">
+          {meId === null ? 'Pick your team' : 'Change team'}
+        </button>
       </div>
       <ol className="mt-2 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
         {highlighted.map((m) => {
