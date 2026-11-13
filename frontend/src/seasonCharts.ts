@@ -160,15 +160,23 @@ export function raceFrame(managers: Manager[], pool: number[], event: number, me
   const rows = pool.map((id) => {
     const gw = byId.get(id)?.history.find((h) => h.event === event)
     const rank = gw?.league_rank ?? Infinity
+    // Everyone ranked inside the top shows, so a tie at the cut-off keeps both.
     const visible = gw !== undefined && (rank <= top || id === meId)
-    return { entryId: id, rank, total: gw?.total ?? 0, visible }
+    return { entryId: id, rank, total: gw?.total ?? 0, visible, team: byId.get(id)?.team_name ?? '' }
   })
+  // Managers level on points share a rank but never a row: break ties by name.
+  const order = [...rows].sort((a, b) => a.rank - b.rank || b.total - a.total || a.team.localeCompare(b.team) || a.entryId - b.entryId)
+  const row = new Map(order.map((r, i) => [r.entryId, i]))
+  const inTop = rows.filter((r) => r.rank <= top).length
   const shown = rows.filter((r) => r.visible).map((r) => r.total)
   const hi = Math.max(...shown)
   const lo = Math.min(...shown)
   return rows.map((r) => ({
-    ...r,
-    slot: r.rank <= top ? r.rank - 1 : r.visible ? top + 0.4 : top + 1.5,
+    entryId: r.entryId,
+    rank: r.rank,
+    total: r.total,
+    visible: r.visible,
+    slot: r.rank <= top ? row.get(r.entryId)! : r.visible ? inTop + 0.4 : inTop + 1.5,
     width: !r.visible ? 0 : hi === lo ? 100 : MIN_WIDTH + ((r.total - lo) / (hi - lo)) * (100 - MIN_WIDTH),
   }))
 }

@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { Pause, Play } from 'lucide-react'
 import type { Manager } from '../api'
 import { lateJoiners } from '../joined'
-import { RACE_TOP, raceFrame, racePool } from '../seasonCharts'
+import { raceFrame, racePool } from '../seasonCharts'
 import { JoinedNote } from './JoinedNote'
 
 const ROW = 36 // px per bar row
@@ -44,9 +44,7 @@ export default function TitleRace({ managers, events, meId }: { managers: Manage
     setPlaying(true)
   }
 
-  const meOutside = bars.some((b) => b.entryId === meId && b.visible && b.rank > RACE_TOP)
-  const rowsShown = Math.min(RACE_TOP, bars.filter((b) => b.visible && b.rank <= RACE_TOP).length)
-  const height = (meOutside ? rowsShown + 1.4 : rowsShown) * ROW
+  const height = (Math.max(0, ...bars.filter((b) => b.visible).map((b) => b.slot)) + 1) * ROW
 
   return (
     <section aria-label={`Standings after gameweek ${shown}`} className="rounded-2xl border border-line bg-card p-3.5">

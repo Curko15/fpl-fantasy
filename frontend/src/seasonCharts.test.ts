@@ -141,4 +141,31 @@ describe('race', () => {
     ])
     expect(frame.map((b) => Math.round(b.width))).toEqual([100, 91, 0, 40])
   })
+
+  it('gives managers level on points their own rows', () => {
+    // Entries 2 and 3 tie for 2nd; entry 4 is 4th.
+    const tied = [
+      manager(1, 1, [gw(1, 70, 70, 1)]),
+      manager(2, 2, [gw(1, 60, 60, 2)]),
+      manager(3, 3, [gw(1, 60, 60, 2)]),
+      manager(4, 4, [gw(1, 50, 50, 4)]),
+    ]
+    const frame = raceFrame(tied, [1, 2, 3, 4], 1, null, 3)
+    expect(frame.map((b) => [b.entryId, b.rank, b.slot, b.visible])).toEqual([
+      [1, 1, 0, true],
+      [2, 2, 1, true],
+      [3, 2, 2, true],
+      [4, 4, 4.5, false],
+    ])
+  })
+
+  it('keeps a tie at the cut-off on the board', () => {
+    const tied = [manager(1, 1, [gw(1, 70, 70, 1)]), manager(2, 2, [gw(1, 60, 60, 2)]), manager(3, 3, [gw(1, 60, 60, 2)])]
+    const frame = raceFrame(tied, [1, 2, 3], 1, null, 2)
+    expect(frame.map((b) => [b.slot, b.visible])).toEqual([
+      [0, true],
+      [1, true],
+      [2, true],
+    ])
+  })
 })
