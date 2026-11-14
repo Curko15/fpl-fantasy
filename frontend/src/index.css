@@ -14,6 +14,7 @@
   --color-ink-2: #3d3e44;
   --color-muted: #5f6068;
   --color-line: #e6e4de;
+  --color-track: #e6e4de;
   --color-accent: #4b1d8f;
   --color-accent-ink: #ffffff;
   --color-pop: #d7f36b;
@@ -45,6 +46,7 @@
     --color-ink-2: #c5c9d0;
     --color-muted: #9ba1aa;
     --color-line: #24272d;
+    --color-track: #2a2e35;
     --color-accent: #3dffa2;
     --color-accent-ink: #06140d;
     --color-pop: #3dffa2;
@@ -66,6 +68,7 @@
   --color-ink-2: #c5c9d0;
   --color-muted: #9ba1aa;
   --color-line: #24272d;
+  --color-track: #2a2e35;
   --color-accent: #3dffa2;
   --color-accent-ink: #06140d;
   --color-pop: #3dffa2;

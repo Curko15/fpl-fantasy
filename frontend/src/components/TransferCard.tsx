@@ -2,16 +2,22 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { formatPrice, type Player } from '../api'
 import { PlayerPhoto } from './PlayerPhoto'
+import { YouTag } from './YouTag'
+import { useMe } from '../pages/leagueContext'
 import { CHIP_LABEL, verdict, type ManagerGameweek } from '../transfers'
 
 export function TransferCard({ card, title }: { card: ManagerGameweek; title?: ReactNode }) {
   const { manager, transfers, chip, hitCost } = card
+  const [meId] = useMe()
   return (
     <li className="rounded-2xl border border-line bg-card px-3.5 py-3">
       <div className="flex items-center gap-2">
         {title ?? (
           <Link to={`../manager/${manager.entry_id}`} className="-my-1 min-w-0 flex-1 py-1">
-            <div className="truncate font-medium">{manager.team_name}</div>
+            <div className="flex items-center gap-1.5">
+              <span className="truncate font-medium">{manager.team_name}</span>
+              {manager.entry_id === meId && <YouTag />}
+            </div>
             <div className="truncate text-xs text-muted">{manager.player_name}</div>
           </Link>
         )}

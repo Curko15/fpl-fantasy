@@ -1,9 +1,11 @@
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useMemo } from 'react'
 import { NavLink, Outlet, useLocation, useMatch, useParams } from 'react-router-dom'
 import { ArrowLeftRight, ChartLine, Trophy, Zap, type LucideIcon } from 'lucide-react'
 import { AppHeader } from '../components/AppHeader'
 import { useQuery } from '@tanstack/react-query'
-import { ApiError, fetchLeague, retryNetworkErrors } from '../api'
+import { ApiError, fetchLeague, retryNetworkErrors, type LeagueOverview } from '../api'
+import { TeamBar } from '../components/TeamBar'
+import { useMyTeam } from '../myTeam'
 import { rememberLeague } from '../recentLeagues'
 import { ErrorCard } from '../components/Status'
 import { Bone, PageSkeleton, StandingsSkeleton } from '../components/Skeleton'
@@ -34,6 +36,10 @@ export default function LeagueLayout() {
   const valid = Number.isSafeInteger(leagueId) && leagueId > 0
   const { pathname } = useLocation()
   const managerMatch = useMatch('/league/:leagueId/manager/:entryId')
+  const compareMatch = useMatch('/league/:leagueId/compare')
+  const liveMatch = useMatch('/league/:leagueId/live')
+  // Detail pages get a back button instead of the league title, and no team bar.
+  const detail = managerMatch !== null || compareMatch !== null || liveMatch !== null
 
   const query = useQuery({
     queryKey: ['league', leagueId],
@@ -87,9 +93,9 @@ export default function LeagueLayout() {
 
   return (
     <>
-      {managerMatch ? (
+      {detail ? (
         <AppHeader
-          title={manager?.team_name ?? 'Manager'}
+          title={compareMatch ? 'Head-to-head' : liveMatch ? 'Live scores' : (manager?.team_name ?? 'Manager')}
           subtitle={data.league.name}
           back={{ to: `/league/${data.league.id}`, label: `Back to ${data.league.name}` }}
         />
@@ -134,12 +140,24 @@ export default function LeagueLayout() {
 
       <main className={shell}>
         <Suspense fallback={<PageSkeleton />}>
+          {!detail && <MyTeamBar league={data} />}
           <Outlet context={{ league: data } satisfies LeagueContext} />
         </Suspense>
       </main>
 
       <BottomTabs />
     </>
+  )
+}
+
+/** "Your team" switcher, always at the top of the league tabs. */
+function MyTeamBar({ league }: { league: LeagueOverview }) {
+  const ids = useMemo(() => league.managers.map((m) => m.entry_id), [league.managers])
+  const [myTeam, setMyTeam] = useMyTeam(league.league.id, ids)
+  return (
+    <div className="mb-6">
+      <TeamBar managers={league.managers} value={myTeam} onChange={setMyTeam} />
+    </div>
   )
 }
 

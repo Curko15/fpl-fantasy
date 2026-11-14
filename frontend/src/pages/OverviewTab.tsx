@@ -1,15 +1,21 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronRight, Radio, Swords } from 'lucide-react'
 import type { Award, AwardWinner, LeagueOverview, Manager } from '../api'
 import { AWARDS, awardHeadline, awardStory } from '../awards'
 import { chipLabel } from '../chips'
-import LeagueChart from '../components/LeagueChart'
+import FocusChart from '../components/FocusChart'
 import { PlayerPhoto } from '../components/PlayerPhoto'
+import ScoreSpread from '../components/ScoreSpread'
+import { SectionHeading } from '../components/SectionHeading'
+import { Segmented } from '../components/Segmented'
 import { Bone } from '../components/Skeleton'
 import StandingsTable from '../components/StandingsTable'
+import TitleRace from '../components/TitleRace'
 import { chipsLeft, gameweekSummary, transferPulse, type PlayerCount } from '../dashboard'
 import { useLeagueAwards, useLeagueTransfers } from '../queries'
-import { useLeague } from './leagueContext'
+import { YouTag } from '../components/YouTag'
+import { useLeague, useMe } from './leagueContext'
 
 export default function OverviewTab() {
   const { league } = useLeague()
@@ -25,27 +31,69 @@ export default function OverviewTab() {
           Table
         </SectionHeading>
         <StandingsTable managers={league.managers} events={league.events} />
+        {league.managers.length > 1 && (
+          <Link
+            to="compare"
+            className="mt-2.5 flex h-12 items-center gap-3 rounded-2xl border border-line bg-card px-3.5 text-sm font-semibold active:bg-raised"
+          >
+            <Swords size={18} aria-hidden className="shrink-0 text-accent" />
+            <span className="min-w-0 flex-1 truncate">Head-to-head: compare two teams</span>
+            <ChevronRight size={18} aria-hidden className="shrink-0 text-muted" />
+          </Link>
+        )}
       </section>
 
       <TransferPulseSection leagueId={league.league.id} managers={managers} />
       <ChipsLeft league={league} />
 
-      <section aria-labelledby="chart-heading">
-        <SectionHeading id="chart-heading">Season so far</SectionHeading>
-        <LeagueChart managers={league.managers} events={league.events} />
-      </section>
+      <SeasonCharts league={league} />
     </div>
   )
 }
 
-function SectionHeading({ id, children, aside }: { id: string; children: ReactNode; aside?: ReactNode }) {
+function SeasonCharts({ league }: { league: LeagueOverview }) {
+  const [myTeam] = useMe()
+  const [view, setView] = useState<'focus' | 'race'>('focus')
+  if (league.events.length === 0) return null
+
   return (
-    <div className="mb-3 flex items-baseline justify-between gap-2">
-      <h2 id={id} className="font-display text-lg font-bold tracking-tight">
-        {children}
-      </h2>
-      {aside}
-    </div>
+    <>
+      <section aria-labelledby="chart-heading">
+        <SectionHeading id="chart-heading" aside={<span className="text-xs text-muted">{league.managers.length} managers</span>}>
+          Season so far
+        </SectionHeading>
+        <Segmented
+          label="Season view"
+          value={view}
+          onChange={setView}
+          className="mb-3"
+          options={[
+            { value: 'focus', label: 'Focus' },
+            { value: 'race', label: 'Race' },
+          ]}
+        />
+        {view === 'focus' ? (
+          <FocusChart
+            key={myTeam ?? 'leader'}
+            managers={league.managers}
+            events={league.events}
+            meId={myTeam}
+          />
+        ) : (
+          <TitleRace managers={league.managers} events={league.events} meId={myTeam} />
+        )}
+      </section>
+
+      {myTeam !== null && (
+        <section aria-labelledby="spread-heading">
+          <SectionHeading id="spread-heading">Your weeks vs the league</SectionHeading>
+          <p className="-mt-2 mb-3 text-sm text-muted">
+            Every dot is one manager's gameweek score. The band is the middle half of the league.
+          </p>
+          <ScoreSpread managers={league.managers} events={league.events} meId={myTeam} />
+        </section>
+      )}
+    </>
   )
 }
 
@@ -105,6 +153,16 @@ function GameweekHero({ league }: { league: LeagueOverview }) {
           </div>
         ))}
       </dl>
+      {!finished && (
+        <Link
+          to="live"
+          className="mt-3 flex h-12 items-center gap-3 rounded-2xl bg-accent px-3.5 text-sm font-semibold text-accent-ink"
+        >
+          <Radio size={18} aria-hidden className="shrink-0" />
+          <span className="min-w-0 flex-1 truncate">Live scores and table</span>
+          <ChevronRight size={18} aria-hidden className="shrink-0" />
+        </Link>
+      )}
     </section>
   )
 }
@@ -121,7 +179,7 @@ function AwardsStrip({ leagueId, managers }: { leagueId: number; managers: Map<n
 
   return (
     <section aria-labelledby="awards-heading">
-      <SectionHeading id="awards-heading" aside={week && <SeeAll to="awards" />}>
+      <SectionHeading id="awards-heading" aside={week && <SeeAll to="awards?view=week" />}>
         {week ? `GW${week.event} awards` : 'Awards'}
       </SectionHeading>
       <ul className="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-px-4 px-4 pb-1 [scrollbar-width:none]">
@@ -146,6 +204,7 @@ function AwardsStrip({ leagueId, managers }: { leagueId: number; managers: Map<n
 function AwardCard({ award, winner, managers }: { award: Award; winner: AwardWinner; managers: Map<number, Manager> }) {
   const meta = AWARDS[award.key]
   const team = managers.get(winner.entry_id)?.team_name ?? `Manager ${winner.entry_id}`
+  const [meId] = useMe()
   return (
     <li className={`relative w-56 shrink-0 snap-start rounded-2xl border p-3.5 ${awardTone(award)}`}>
       <div className="flex items-start justify-between gap-2">
@@ -159,12 +218,12 @@ function AwardCard({ award, winner, managers }: { award: Award; winner: AwardWin
         )}
       </div>
       <div className="mt-2 font-display text-3xl leading-none font-bold tabular-nums">{awardHeadline(award.key, winner)}</div>
-      <Link
-        to={`manager/${winner.entry_id}`}
-        className="mt-1.5 block truncate text-sm font-semibold after:absolute after:inset-0"
-      >
-        {team}
-      </Link>
+      <div className="mt-1.5 flex items-center gap-1.5">
+        <Link to={`manager/${winner.entry_id}`} className="min-w-0 truncate text-sm font-semibold after:absolute after:inset-0">
+          {team}
+        </Link>
+        {winner.entry_id === meId && <YouTag onPop={award.key === 'manager_of_week'} />}
+      </div>
       <p className="mt-0.5 line-clamp-2 text-xs opacity-80">{awardStory(award.key, winner)}</p>
     </li>
   )

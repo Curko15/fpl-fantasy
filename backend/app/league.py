@@ -80,7 +80,7 @@ def _chip_definitions(bootstrap: dict[str, Any]) -> list[ChipDefinition]:
     return sorted(chips, key=lambda c: (c.start_event, c.name))
 
 
-def _competition_ranks(totals: dict[int, int]) -> dict[int, int]:
+def competition_ranks(totals: dict[int, int]) -> dict[int, int]:
     """1,2,2,4 style ranking (ties share a rank)."""
     ordered = sorted(totals.values(), reverse=True)
     return {entry: ordered.index(total) + 1 for entry, total in totals.items()}
@@ -134,7 +134,7 @@ def build_league_overview(
     league_ranks: dict[int, dict[int, int]] = {}
     for event in events:
         totals = {entry: gws[event][1] for entry, gws in per_manager.items() if event in gws}
-        league_ranks[event] = _competition_ranks(totals)
+        league_ranks[event] = competition_ranks(totals)
 
     managers = [
         Manager(

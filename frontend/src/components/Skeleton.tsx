@@ -109,7 +109,7 @@ export function ManagerSkeleton() {
     <Status label="Loading team history" className="mt-3">
       <div className="grid grid-cols-3 gap-2">
         {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className="space-y-1.5 rounded-xl border border-line bg-card px-3 py-2.5">
+          <div key={i} className="space-y-1.5 rounded-2xl border border-line bg-card px-3 py-2.5">
             <Bone className="h-3 w-3/4" />
             <Bone className="h-5 w-1/2" />
             <Bone className="h-2.5 w-2/3" />

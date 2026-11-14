@@ -19,6 +19,15 @@ logger = logging.getLogger(__name__)
 
 # Bootstrap says which gameweek is current and finished; refetch it at most this often.
 BOOTSTRAP_MAX_AGE = timedelta(hours=1)
+# Live points of a gameweek being played: one FPL fetch per minute, however many viewers.
+LIVE_MAX_AGE = timedelta(seconds=60)
+
+
+@dataclass
+class LiveEvent:
+    points: dict[int, int]
+    fixtures: list[dict[str, Any]]
+    fetched_at: datetime
 
 
 @dataclass
@@ -45,6 +54,7 @@ class FplStore:
         self._locks: dict[Hashable, asyncio.Lock] = {}
         self._bootstrap: tuple[datetime, dict[str, Any]] | None = None
         self._background: dict[Hashable, asyncio.Task[None]] = {}
+        self._live_events: dict[int, LiveEvent] = {}
 
     def _lock(self, key: Hashable) -> asyncio.Lock:
         return self._locks.setdefault(key, asyncio.Lock())
@@ -182,6 +192,40 @@ class FplStore:
 
     async def live(self, events: Iterable[int]) -> dict[int, dict[int, int]]:
         return await self._live(set(events), refetch_provisional=False)
+
+    async def event_picks(self, entry_ids: Iterable[int], event: int) -> dict[int, dict[str, Any]]:
+        """Every manager's picks for one gameweek. Picks are fixed once the deadline has
+        passed, so each is fetched once and then read from the database."""
+        wanted = {entry: [event] for entry in entry_ids}
+        picks = await self._picks(wanted, refetch_provisional=False)
+        return {entry: by_event[event] for entry, by_event in picks.items()}
+
+    async def live_event(self, event: int) -> LiveEvent:
+        """Live points and fixtures for a gameweek being played, at most `LIVE_MAX_AGE` old.
+
+        The points are also stored (as provisional), so transfers and awards pick them up.
+        """
+        async with self._lock(("live", event)):
+            cached = self._live_events.get(event)
+            if cached and utcnow() - cached.fetched_at < LIVE_MAX_AGE:
+                return cached
+            payload, fixtures = await asyncio.gather(
+                self._fpl.event_live(event), self._fpl.fixtures(event)
+            )
+            points = live_points(payload)
+            now = utcnow()
+            async with self._sessions.begin() as session:
+                await session.merge(
+                    LiveRow(
+                        event=event,
+                        points={str(k): v for k, v in points.items()},
+                        final=False,
+                        fetched_at=now,
+                    )
+                )
+            # Only the gameweek being played is ever cached; drop older ones.
+            self._live_events = {event: LiveEvent(points, fixtures, now)}
+            return self._live_events[event]
 
     async def stored_picks(self, entry_ids: Iterable[int]) -> dict[int, dict[int, dict[str, Any]]]:
         """Every stored gameweek of picks for these managers, without fetching anything."""
