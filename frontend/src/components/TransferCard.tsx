@@ -2,12 +2,12 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { formatPrice, type Player } from '../api'
 import { PlayerPhoto } from './PlayerPhoto'
-import { CHIP_LABEL, type ManagerGameweek } from '../transfers'
+import { CHIP_LABEL, verdict, type ManagerGameweek } from '../transfers'
 
 export function TransferCard({ card, title }: { card: ManagerGameweek; title?: ReactNode }) {
   const { manager, transfers, chip, hitCost } = card
   return (
-    <li className="rounded-xl border border-line bg-card px-3 py-2.5">
+    <li className="rounded-2xl border border-line bg-card px-3.5 py-3">
       <div className="flex items-center gap-2">
         {title ?? (
           <Link to={`../manager/${manager.entry_id}`} className="-my-1 min-w-0 flex-1 py-1">
@@ -22,13 +22,14 @@ export function TransferCard({ card, title }: { card: ManagerGameweek; title?: R
         {transfers.map((t) => (
           <li
             key={`${t.time}-${t.player_in.id}`}
-            className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 py-2.5"
+            className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-1.5 py-2.5"
           >
-            <PlayerCell direction="out" player={t.player_out} price={t.out_cost} />
+            <PlayerCell direction="out" player={t.player_out} price={t.out_cost} points={t.out_points} />
             <span aria-hidden className="text-muted">
               →
             </span>
-            <PlayerCell direction="in" player={t.player_in} price={t.in_cost} hit={t.kind === 'hit'} />
+            <PlayerCell direction="in" player={t.player_in} price={t.in_cost} points={t.in_points} hit={t.kind === 'hit'} />
+            <Verdict value={verdict(t)} />
           </li>
         ))}
       </ul>
@@ -40,11 +41,13 @@ function PlayerCell({
   direction,
   player,
   price,
+  points,
   hit = false,
 }: {
   direction: 'in' | 'out'
   player: Player
   price: number
+  points: number | null
   hit?: boolean
 }) {
   const out = direction === 'out'
@@ -72,10 +75,24 @@ function PlayerCell({
           )}
         </div>
         <div className="truncate text-xs text-muted">
-          {player.team} · {formatPrice(price)}
+          {points === null ? `${player.team} · ${formatPrice(price)}` : `${points} pt${points === 1 ? '' : 's'} · ${player.team}`}
         </div>
       </div>
     </div>
+  )
+}
+
+/** Points the swap gained that gameweek: green when it paid off, red when it backfired. */
+function Verdict({ value }: { value: number | null }) {
+  if (value === null) return <span className="w-10" />
+  const tone = value > 0 ? 'bg-up/14 text-up' : value < 0 ? 'bg-down/14 text-down' : 'bg-raised text-muted'
+  return (
+    <span
+      className={`grid h-7 min-w-10 place-items-center rounded-full px-1.5 font-display text-sm font-bold tabular-nums ${tone}`}
+      aria-label={value > 0 ? `Gained ${value} points` : value < 0 ? `Lost ${-value} points` : 'No difference'}
+    >
+      {value > 0 ? `+${value}` : value}
+    </span>
   )
 }
 

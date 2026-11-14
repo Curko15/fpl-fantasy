@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Award, AwardWinner, LeagueOverview, Manager } from '../api'
-import { AWARDS, awardHeadline } from '../awards'
+import { AWARDS, awardHeadline, awardStory } from '../awards'
 import { chipLabel } from '../chips'
 import LeagueChart from '../components/LeagueChart'
 import { PlayerPhoto } from '../components/PlayerPhoto'
@@ -143,12 +143,6 @@ function AwardsStrip({ leagueId, managers }: { leagueId: number; managers: Map<n
   )
 }
 
-// The headline already shows the score; say something else on these cards.
-const CARD_STORY: Partial<Record<Award['key'], string>> = {
-  manager_of_week: 'Highest score in the league',
-  loser_of_week: 'Lowest score in the league',
-}
-
 function AwardCard({ award, winner, managers }: { award: Award; winner: AwardWinner; managers: Map<number, Manager> }) {
   const meta = AWARDS[award.key]
   const team = managers.get(winner.entry_id)?.team_name ?? `Manager ${winner.entry_id}`
@@ -171,7 +165,7 @@ function AwardCard({ award, winner, managers }: { award: Award; winner: AwardWin
       >
         {team}
       </Link>
-      <p className="mt-0.5 line-clamp-2 text-xs opacity-80">{CARD_STORY[award.key] ?? meta.describe(winner)}</p>
+      <p className="mt-0.5 line-clamp-2 text-xs opacity-80">{awardStory(award.key, winner)}</p>
     </li>
   )
 }

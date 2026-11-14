@@ -9,6 +9,11 @@ const KNOWN: Record<string, { label: string; short: string }> = {
 }
 const ORDER = Object.keys(KNOWN)
 
+/** CSS colour for a chip (theme tokens); unknown chips fall back to a neutral. */
+export function chipColor(name: string): string {
+  return ORDER.includes(name) ? `var(--color-chip-${name})` : 'var(--color-muted)'
+}
+
 export function chipLabel(name: string): { label: string; short: string } {
   return KNOWN[name] ?? { label: name, short: name.slice(0, 3).toUpperCase() }
 }
@@ -62,4 +67,56 @@ export function managerChipSlots(
     result.set(column.name, slots)
   }
   return result
+}
+
+export interface ChipHalf {
+  start: number
+  stop: number
+}
+
+/**
+ * The season's chip windows (e.g. GW1–19 and GW20–38), in order. Chips sharing a
+ * deadline belong to one window, even if one opens later (the first Wildcard starts in GW2).
+ */
+export function chipHalves(definitions: ChipDefinition[]): ChipHalf[] {
+  const byStop = new Map<number, number>()
+  for (const d of definitions) byStop.set(d.stop_event, Math.min(byStop.get(d.stop_event) ?? d.start_event, d.start_event))
+  return [...byStop.entries()].map(([stop, start]) => ({ start, stop })).sort((a, b) => a.start - b.start)
+}
+
+export interface ChipPlay {
+  manager: Manager
+  event: number
+  points: number
+}
+
+export interface ChipHalfCard {
+  name: string
+  plays: ChipPlay[] // in this window, by gameweek
+  best: ChipPlay | null
+  average: number | null
+  holders: Manager[] // can still play it in this window (now or once it opens)
+}
+
+/** One card per chip for one window: who played it, how it went, who still holds it. */
+export function chipHalfCards(managers: Manager[], definitions: ChipDefinition[], half: ChipHalf, nextEvent: number): ChipHalfCard[] {
+  const inHalf = (e: number) => e >= half.start && e <= half.stop
+  return chipColumns(definitions.filter((d) => d.stop_event === half.stop)).map((column) => {
+    const plays = managers
+      .flatMap((m) => m.history.filter((h) => h.chip === column.name && inHalf(h.event)).map((h) => ({ manager: m, event: h.event, points: h.points })))
+      .sort((a, b) => a.event - b.event)
+    const best = plays.reduce<ChipPlay | null>((b, p) => (!b || p.points > b.points ? p : b), null)
+    const holders = managers.filter((m) => {
+      if (plays.some((p) => p.manager.entry_id === m.entry_id)) return false
+      const slot = managerChipSlots(m, [column], nextEvent).get(column.name)?.[0]
+      return slot?.state === 'available' || slot?.state === 'later'
+    })
+    return {
+      name: column.name,
+      plays,
+      best,
+      average: plays.length ? Math.round(plays.reduce((n, p) => n + p.points, 0) / plays.length) : null,
+      holders,
+    }
+  })
 }

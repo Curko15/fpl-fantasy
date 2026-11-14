@@ -109,3 +109,15 @@ def test_league_feed_and_summary():
     assert (unknown.name, unknown.photo_code, unknown.team_code) == ("Player 999", None, None)
     summary = result.managers[0]
     assert (summary.transfers, summary.hits, summary.hit_cost) == (4, 1, 4)
+
+
+def test_transfers_carry_gameweek_points_once_live_is_stored():
+    transfers = {1: [transfer(10, 20, 2, 1), transfer(30, 10, 3, 6)]}
+    data = overview([gw(2), gw(3)])
+
+    # Saka (10) scored 9 in GW2, Salah (20) 4; GW3's live points aren't stored yet.
+    result = build_league_transfers(data, transfers, BOOTSTRAP, {2: {10: 9, 20: 4}})
+
+    by_event = {t.event: t for t in result.transfers}
+    assert (by_event[2].in_points, by_event[2].out_points) == (9, 4)
+    assert (by_event[3].in_points, by_event[3].out_points) == (None, None)

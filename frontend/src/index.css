@@ -25,6 +25,16 @@
   --color-logo-ink: #ffffff;
 }
 
+/* Chip colours: same in both themes, always with dark text on top. "static" keeps
+   every variable in the CSS, since some are only read from JS (chipColor). */
+@theme static {
+  --color-chip-wildcard: #b69cff;
+  --color-chip-freehit: #5cc8ff;
+  --color-chip-bboost: #ffc24d;
+  --color-chip-3xc: #3dffa2;
+  --color-chip-ink: #0a0b0d;
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;

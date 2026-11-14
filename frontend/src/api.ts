@@ -73,6 +73,9 @@ export interface Transfer {
   player_out: Player
   out_cost: number
   kind: TransferKind
+  /** Points each player scored that gameweek; null until its live points are stored. */
+  in_points: number | null
+  out_points: number | null
 }
 
 export interface ManagerTransferSummary {
