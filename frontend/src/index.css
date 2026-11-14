@@ -1,38 +1,70 @@
 @import "tailwindcss";
 
-/* Design tokens. Utilities like bg-surface / text-ink read these, and dark mode
-   only swaps the variables, so components never need dark: variants. */
+/* Design tokens. Utilities like bg-surface / text-ink read these; themes only swap
+   the variables, so components never need dark: variants.
+   Light: warm paper, deep purple, lime. Dark: "floodlight" near-black with neon green. */
 @theme {
-  --color-surface: #f6f6f4;
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", Inter, ui-sans-serif, system-ui, sans-serif;
+
+  --color-surface: #f4f3ef;
   --color-card: #ffffff;
-  --color-ink: #0b0b0b;
-  --color-ink-2: #52514e;
-  --color-muted: #6f6e69;
-  --color-line: #e4e3df;
-  --color-accent: #37003c;
+  --color-raised: #f4f3ef;
+  --color-ink: #111114;
+  --color-ink-2: #3d3e44;
+  --color-muted: #5f6068;
+  --color-line: #e6e4de;
+  --color-accent: #4b1d8f;
   --color-accent-ink: #ffffff;
+  --color-pop: #d7f36b;
+  --color-pop-ink: #1a2200;
   --color-up: #0f7b3e;
   --color-down: #c7362f;
   --color-focus: #2a78d6;
-  --color-pop: #00e087;
+  --color-logo-bg: #4b1d8f;
+  --color-logo-ink: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --color-surface: #121211;
-    --color-card: #1a1a19;
-    --color-ink: #f0efec;
-    --color-ink-2: #c3c2b7;
-    --color-muted: #9a998f;
-    --color-line: #2e2e2c;
-    --color-accent: #e0b0ff;
-    --color-accent-ink: #1a0020;
-    --color-up: #4cc27f;
-    --color-down: #f07a72;
-    --color-focus: #3987e5;
-    --color-pop: #0a9f63;
+    --color-surface: #0a0b0d;
+    --color-card: #15171b;
+    --color-raised: #1c1f24;
+    --color-ink: #f2f3f5;
+    --color-ink-2: #c5c9d0;
+    --color-muted: #9ba1aa;
+    --color-line: #24272d;
+    --color-accent: #3dffa2;
+    --color-accent-ink: #06140d;
+    --color-pop: #3dffa2;
+    --color-pop-ink: #06140d;
+    --color-up: #3dffa2;
+    --color-down: #ff7a70;
+    --color-focus: #5cc8ff;
+    --color-logo-bg: #1c1f24;
+    --color-logo-ink: #f2f3f5;
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-surface: #0a0b0d;
+  --color-card: #15171b;
+  --color-raised: #1c1f24;
+  --color-ink: #f2f3f5;
+  --color-ink-2: #c5c9d0;
+  --color-muted: #9ba1aa;
+  --color-line: #24272d;
+  --color-accent: #3dffa2;
+  --color-accent-ink: #06140d;
+  --color-pop: #3dffa2;
+  --color-pop-ink: #06140d;
+  --color-up: #3dffa2;
+  --color-down: #ff7a70;
+  --color-focus: #5cc8ff;
+  --color-logo-bg: #1c1f24;
+  --color-logo-ink: #f2f3f5;
 }
 
 html {
@@ -72,4 +104,11 @@ body {
   .appear-late {
     animation-duration: 0s;
   }
+}
+
+/* Headings use the display face everywhere. */
+h1,
+h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
 }

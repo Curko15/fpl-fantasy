@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { fetchLeagueAwards, retryNetworkErrors, type Award, type LeagueAwards, type Manager } from '../api'
+import { useLeagueAwards } from '../queries'
+import { type Award, type LeagueAwards, type Manager } from '../api'
 import { AWARDS, awardNote } from '../awards'
 import { PlayerPhoto } from '../components/PlayerPhoto'
 import { ErrorCard } from '../components/Status'
@@ -12,14 +12,7 @@ export default function AwardsTab() {
   const { league } = useLeague()
   const [params, setParams] = useSearchParams()
 
-  const query = useQuery({
-    queryKey: ['league', league.league.id, 'awards'],
-    queryFn: () => fetchLeagueAwards(league.league.id),
-    staleTime: 5 * 60_000,
-    retry: retryNetworkErrors,
-    // Team data is fetched in the background after a league's first visit: keep checking.
-    refetchInterval: (q) => (q.state.data?.pending_events.length ? 5000 : false),
-  })
+  const query = useLeagueAwards(league.league.id)
 
   const managers = useMemo(() => new Map(league.managers.map((m) => [m.entry_id, m])), [league.managers])
 

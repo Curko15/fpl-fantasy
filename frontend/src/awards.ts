@@ -80,3 +80,9 @@ export function awardNote(award: Award): string | null {
   }
   return null
 }
+
+/** The big number on an award card. */
+export function awardHeadline(key: AwardKey, w: AwardWinner): string {
+  if (key === 'hit_regret') return `−${w.value}`
+  return pts(w.value)
+}

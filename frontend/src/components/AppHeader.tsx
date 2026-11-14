@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { Logo } from './Logo'
+import { ThemeToggle } from './ThemeToggle'
 
 /**
  * Sticky top bar. Shows a back button when `back` is given, otherwise the logo
@@ -33,9 +34,10 @@ export function AppHeader({
           </Link>
         )}
         <div className="min-w-0 flex-1 pr-2">
-          <h1 className="truncate text-base leading-tight font-semibold">{title}</h1>
+          <h1 className="truncate font-display text-[17px] leading-tight font-bold tracking-tight">{title}</h1>
           {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
         </div>
+        <ThemeToggle />
       </div>
     </header>
   )
