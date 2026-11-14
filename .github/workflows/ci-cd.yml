@@ -80,9 +80,12 @@ jobs:
       - run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      # The backend address comes from the repo variable API_URL. It ends up in public JS
+      # anyway, and Vercel won't hand out env vars marked "Sensitive" to the CLI.
       - run: vercel build --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VITE_API_URL: ${{ vars.API_URL }}
       - run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
