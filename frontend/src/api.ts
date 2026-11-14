@@ -179,10 +179,13 @@ export function retryNetworkErrors(count: number, error: unknown): boolean {
   return error instanceof ApiError && error.code === 'network' && count < 2
 }
 
+/** Backend address in production (set on Vercel); empty locally, where Vite proxies /api. */
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+
 async function getJson<T>(url: string): Promise<T> {
   let res: Response
   try {
-    res = await fetch(url)
+    res = await fetch(API_BASE + url)
   } catch {
     throw new ApiError('network', "Couldn't reach the server. Check your connection.")
   }

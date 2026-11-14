@@ -1,7 +1,8 @@
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Path, Query, Request
+from fastapi import FastAPI, Header, HTTPException, Path, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -12,7 +13,7 @@ from app.fpl_client import FplClient, FplError, make_http_client
 from app.league import LeagueError, LeagueOverview, build_league_overview
 from app.live import LiveLeague, build_live_league
 from app.manager import ManagerDetail, build_manager_detail
-from app.refresh import start_scheduler
+from app.refresh import refresh_recent_leagues, start_scheduler
 from app.store import BOOTSTRAP_MAX_AGE, FplStore
 from app.transfers import LeagueTransfers, build_league_transfers
 
@@ -81,6 +82,18 @@ async def _overview(store: FplStore, league_id: int) -> LeagueOverview:
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/api/refresh", status_code=202)
+async def trigger_refresh(request: Request, authorization: str = Header("")) -> dict[str, str]:
+    """Starts the daily refresh. Called by a scheduled GitHub Action, because a free-tier
+    server is usually asleep when the built-in scheduler would fire."""
+    token = settings.refresh_token
+    if not token or not secrets.compare_digest(authorization, f"Bearer {token}"):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    store = _store(request)
+    store.spawn("daily-refresh", refresh_recent_leagues(store))
+    return {"status": "started"}
 
 
 @app.get("/api/leagues/{league_id}", response_model=LeagueOverview)
