@@ -1,3 +1,5 @@
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -26,6 +28,10 @@ class Settings(BaseSettings):
     # Scheduler and background fetching. Turned off in tests.
     background_jobs: bool = True
 
+    # Lets a scheduled job start the daily refresh via POST /api/refresh. Unset: disabled.
+    refresh_token: str = ""
+
+    # In production, a JSON list in FPL_CORS_ORIGINS, e.g. ["https://my-app.vercel.app"].
     cors_origins: list[str] = ["http://localhost:5173"]
 
     @field_validator("database_url")
@@ -34,8 +40,19 @@ class Settings(BaseSettings):
         # Hosted Postgres (Neon, Supabase, Render) hands out plain postgres:// URLs.
         for prefix in ("postgres://", "postgresql://"):
             if url.startswith(prefix):
-                return "postgresql+asyncpg://" + url.removeprefix(prefix)
-        return url
+                url = "postgresql+asyncpg://" + url.removeprefix(prefix)
+        if not url.startswith("postgresql+asyncpg://"):
+            return url
+        # asyncpg rejects libpq's `sslmode` and `channel_binding` (Neon adds both):
+        # translate sslmode to asyncpg's `ssl` and drop channel_binding.
+        parts = urlsplit(url)
+        query = []
+        for key, value in parse_qsl(parts.query):
+            if key == "sslmode":
+                query.append(("ssl", value))
+            elif key != "channel_binding":
+                query.append((key, value))
+        return urlunsplit(parts._replace(query=urlencode(query)))
 
 
 settings = Settings()
