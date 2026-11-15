@@ -1,23 +1,18 @@
-# Handoff: where the project stands (2026-11-13)
+# Handoff: where the project stands (2026-11-15)
 
 Read this first in a new session, together with `docs/PLAN.md`.
 
 ## State of the code
 
-| PR | Branch | Status | What |
-|---|---|---|---|
-| #1–#11 | – | merged | v1 features (overview, transfers, chips, manager page, database + daily refresh, awards), player photos, app shell + bottom tabs, skeletons, PWA, home page |
-| #12 | `dashboard` | **open** | League home as a dashboard (design A "Floodlight") + System / Light / Dark theme switch |
-| #13 | `tabs-redesign` | **open, stacked on #12** | Transfers (Feed / Market), Chips (cards + timeline), Awards (Gameweek / Season) |
-| #14 | `season-charts` | **open, stacked on #13** | Season charts for big leagues: Focus + Race switch, "Your weeks vs the league", "my team" choice |
-| #15 | `my-team-everywhere` | **open, stacked on #14** | "You" highlights on every tab, manager page restyle with "This is my team" and weeks-vs-league |
-| #16 | `team-bar` | **open, stacked on #15** | Always-on "Your team" switcher bar at the top of every league tab |
-| #17 | `matchday-recap` | **open, stacked on #16** | Matchday recap as the first view of the Awards tab |
-| #18 | `head-to-head` | **open, stacked on #17** | Head-to-head page comparing two managers |
-| #19 | `live-gameweek` | **open, stacked on #18** | Live gameweek view: live scores and table while a GW is being played |
-| #20 | `polish-pass` | **open, stacked on #19** | Polish: lazy-loaded chart code, "Joined GWn" marks for mid-season joiners |
+Everything is merged into `master` and live at **https://fpl-fantasy.vercel.app**
+(backend https://fpl-league-api-k4w0.onrender.com). Branch new work from `master`.
 
-Merge #12, then #13, #14, #15, #16, #17, #18, #19 and #20, in that order. Branch new work from `master` after both are merged. If they're still open, branch from `tabs-redesign` and say so in the PR.
+| PR | What |
+|---|---|
+| #1–#11 | v1 features (overview, transfers, chips, manager page, database + daily refresh, awards), player photos, app shell + bottom tabs, skeletons, PWA, home page |
+| #12–#13 | Dashboard league home (design A "Floodlight"), theme switch, Transfers / Chips / Awards redesign |
+| #14–#20 | Season charts, my team everywhere, team bar, matchday recap, head-to-head, live gameweek, polish. Stacked PRs that merged into each other; brought into `master` by #21 |
+| #22–#23 | Deployment (Render + Vercel + Neon), CI/CD pipeline, daily refresh Action |
 
 ## Design decisions (all chosen by the user from canvas prototypes)
 
@@ -69,21 +64,24 @@ Prototype canvas (private to the user): https://claude.ai/artifact/7yzcePz8fTcqb
 - Late joiners other than me don't stretch the Focus "Behind leader" scale; their line runs off the bottom like the faint lines.
 - Fix: `focusTeams` dropped the manager below "me" when "me" was second to last.
 
+## Deployment (done in #22, #23)
+
+- Vercel (frontend), Render free (backend, Frankfurt), Neon free Postgres (Frankfurt, direct connection, no pooler). Full setup in `docs/DEPLOY.md`; URLs in the README.
+- `.github/workflows/ci-cd.yml`: tests on every PR/push; on `master`, deploys only after tests pass (Render deploy hook, Vercel CLI). Render and Vercel auto-deploys are off.
+- `.github/workflows/daily-refresh.yml`: 06:00 UTC, wakes Render and calls `POST /api/refresh` (token-protected).
+- The frontend gets the backend address from the repo variable `API_URL` at build time (Vercel's "Sensitive" env vars can't be pulled by the CLI). `FPL_CORS_ORIGINS` on Render must list `https://fpl-fantasy.vercel.app`.
+- Lesson: when stacking PRs, retarget each to `master` before merging (or turn on "Automatically delete head branches"), otherwise they merge into each other.
+
 ## Backlog
 
-1. **Deployment** (postponed by the user, 2026-11-13). Agreed plan, all free tiers:
-   - Vercel Hobby (frontend), Render free web service (backend), Neon free Postgres (`FPL_DATABASE_URL`).
-   - Render free sleeps after ~15 min idle: 30–60 s cold start, and the in-process 06:00 refresh won't fire while asleep. Fix with a free scheduled ping (GitHub Actions cron or cron-job.org). Always-on Render is ~$7/month if needed.
-   - User: create the three accounts with GitHub, copy the Neon connection string, connect the repo.
-   - Us (one PR): Postgres URL support check, `render.yaml`, `vercel.json` rewriting `/api/*` to Render, wake-up cron, `docs/DEPLOY.md`.
-   - Check the providers' current free-tier limits at signup time.
+Ideas discussed, not started: share the weekly recap as an image, season "Wrapped", recent leagues on the home screen, keep a moving Race bar above the others.
 
 ## How we work
 
 - One branch per feature, PR against `master`. The user merges, then we continue.
 - **No Claude / co-author attribution** in commits or PRs.
 - **Mobile first**: check every screen at 375px, in both themes.
-- Checks before a PR: backend `ruff format`, `ruff check`, `pytest`; frontend `tsc -b`, `eslint src`, `vitest run`, `npm run build`.
+- Checks before a PR: backend `ruff format`, `ruff check`, `pytest`; frontend `tsc -b`, `eslint src`, `vitest run`, `npm run build`. CI runs the same on every PR.
 
 ## Dev notes
 
