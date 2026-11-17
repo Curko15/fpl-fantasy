@@ -4,6 +4,8 @@
 
 ### 🌐 Live: **https://fpl-fantasy.vercel.app**
 
+![Promo: a group chat argues about the gameweek, then League Tracker answers every question](docs/media/promo.gif)
+
 Open it, enter your **classic league ID**, and you get the full story of your league: the
 table and how it moved, every transfer, every chip, weekly awards, a matchday recap,
 head-to-heads and live scores. No account, no login, nothing to install. It is built for
@@ -198,6 +200,7 @@ frontend/             React + TypeScript: the website
   src/components/       shared UI and charts
   src/*.ts              pure helpers with Vitest tests (seasonCharts, recap, headToHead, live, ...)
 docs/                 PLAN.md (plan), DEPLOY.md (deployment), HANDOFF.md (project state and conventions)
+  media/                promo.gif (the promo shown at the top)
 .github/workflows/    ci-cd.yml, daily-refresh.yml
 render.yaml           Render blueprint for the backend
 ```
@@ -259,3 +262,9 @@ Frontend (build time):
 
 This is an unofficial fan project and is not affiliated with the Premier League or
 Fantasy Premier League. It only reads publicly available data from the FPL API.
+
+## Promo credits
+
+The promo at the top (`docs/media/promo.gif`) was made with
+[HyperFrames](https://hyperframes.heygen.com) by HeyGen. All manager, team and league names in
+it are fictional; the footballers in the transfer screens appear as initials only.
